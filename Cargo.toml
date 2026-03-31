@@ -1,0 +1,21 @@
+[package]
+name = "red_doc"
+version = "0.1.0"
+edition = "2024"
+readme = "README.md"
+repository = "https://github.com/MAranich/RedDoc"
+license-file = "gpl-3.0.md"
+
+keywords = ["cybersecurity", "documentation"]
+
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+enum_glob_use = "deny"
+pedantic = "deny"
+nursery = "deny"
+unwrap_used = "deny"
+
+[dependencies]
