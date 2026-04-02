@@ -19,3 +19,7 @@ nursery = "deny"
 unwrap_used = "deny"
 
 [dependencies]
+chrono = {version = "0.4.44", features = ["serde"]}
+clap = {version = "4.6.0", features = ["cargo"]}
+serde = "1.0.228"
+
