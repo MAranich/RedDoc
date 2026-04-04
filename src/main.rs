@@ -13,6 +13,7 @@ const ABOUT_EVENT_CLAP: &'static str = "Add an event, a *consequence* without yo
 const ABOUT_COMMAND_CLAP: &'static str = "Execute the provided command and document it. ";
 
 pub mod node;
+pub mod information;
 
 fn main() {
     let matches: clap::ArgMatches = command!()
