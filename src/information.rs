@@ -3,15 +3,16 @@
 //! 
 //! 
 
+use serde::{Serialize, Deserialize};
 
 
 
 /// Information that has been obtained
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Information<'a> {
-    pub computers: Vec<Computer<'a>>, 
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Information {
+    pub computers: Vec<Computer>, 
     pub ips: Vec<IP>, 
-    pub software: Vec<Software<'a>>, 
+    pub software: Vec<Software>, 
     pub vulnerabilities: Vec<Vulnerability>, 
     pub domains: Vec<String>, 
     pub users: Vec<User>, 
@@ -19,7 +20,7 @@ pub struct Information<'a> {
 }
 
 /// Helper enum for [InfoRef] that indicates what kind of information it is. 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InfoClass {
     Computer, 
     IP, 
@@ -31,7 +32,7 @@ pub enum InfoClass {
 }
 
 /// Reference to a particular element inside an [Information] struct. 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InfoRef {
     index: usize, 
     class: InfoClass, 
@@ -40,25 +41,29 @@ pub struct InfoRef {
 /// Information of a computer. 
 /// 
 /// It does not need to be linked to physical hardware (it may be virtualized). 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Computer<'c> {
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Computer {
     /// A name to quicky identify the computer
     pub name: String, 
     pub ips: Vec<IP>, 
     /// List of open / relevant ports
     pub ports: Vec<u16>, 
-    pub services: Vec<&'c Software<'c>>, 
+    /// Valid Indices to the [Information] stuct (software column)
+    pub services: Vec<usize>, 
     pub is_honeypot: bool, 
     /// The bool indicates if virtulization was used. The second term is an 
     /// optional reference to the virtualitzation software used. 
     /// 
     /// (false, Some(...)) is invalid
-    pub is_virtualized: (bool, Option<&'c Software<'c>>), 
+    /// Valid Indices to the [Information] stuct (software column)
+    pub is_virtualized: (bool, Option<usize>), 
+    /// Represents the highest level of control ever achieved. 
     pub infection_level: ComputerControl, 
-    pub operating_system: &'c Software<'c>, 
+    /// Valid Indices to the [Information] stuct (software column)
+    pub operating_system: Option<usize>, 
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ComputerControl {
     /// Administrative privileges
     Root, 
@@ -71,23 +76,24 @@ pub enum ComputerControl {
 }
 
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IP {
     V4(u32), 
     V6(u64), 
 }
 
 /// Some software used somewhere
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Software<'b> {
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Software {
     pub name: String, 
     pub description: String, 
     pub version: String, 
-    pub vulnerabilities: Vec<&'b Vulnerability>, 
+    /// Valid Indices to the [Information] stuct (Vulnerability column)
+    pub vulnerabilities: Vec<usize>, 
 }
 
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Vulnerability {
     pub cve: String, 
     pub description: String, 
@@ -101,7 +107,7 @@ pub struct Vulnerability {
 /// Subject (possibly a person) related. 
 /// 
 /// Information possibly used for phishing attacks. 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct User {
     // (optional)
     pub name: String, 
@@ -113,7 +119,7 @@ pub struct User {
 }
 
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Credential {
     User(String), 
     UserPassword(String, String), 

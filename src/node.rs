@@ -5,9 +5,10 @@
 
 use crate::information::InfoRef;
 use chrono::prelude::*;
+use serde::{Serialize, Deserialize};
 
 /// Basic structure that stores the relevant information
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Node {
     time_stamp: DateTime<Utc>,
     category: Category,
@@ -17,14 +18,14 @@ pub struct Node {
 ///  - [Category::Action]: Codifies actions taken by the user
 ///  - [Category::Consequence]: Codifies the consequences of actions.
 ///  - [Category::Event]: Codifies any other fact that cannot be direcly attributed to an action.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Category {
     Action(Action),
     Consequence(Consequence),
     Event(Event),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Action {
     /// A custom action, the user may store any string
     Custom(String),
@@ -35,14 +36,14 @@ pub enum Action {
     // Script(String)
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnownCommnad {
     A,
     B,
     C,
 } // TODO
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Consequence {
     Custom(String),
     /// Output of a command
@@ -55,14 +56,14 @@ pub enum Consequence {
     // Unresolved(String)
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Event {
     Custom(String),
     /// The Blue team (Defenders) have discovered the activity.
     Detection,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Timeline(Vec<Node>);
 
 impl Node {
