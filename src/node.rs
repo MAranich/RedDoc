@@ -20,9 +20,9 @@ pub struct Node {
 }
 
 /// The different classes of events that can happen:
-///  - [Category::Action]: Codifies actions taken by the user
-///  - [Category::Consequence]: Codifies the consequences of actions.
-///  - [Category::Event]: Codifies any other fact that cannot be direcly attributed to an action.
+///  - [`Category::Action`]: Codifies actions taken by the user
+///  - [`Category::Consequence`]: Codifies the consequences of actions.
+///  - [`Category::Event`]: Codifies any other fact that cannot be direcly attributed to an action.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Category {
     Action(Action),
@@ -77,8 +77,9 @@ pub struct State {
 }
 
 impl Node {
-    pub fn new(cat: Category) -> Node {
-        return Node {
+    #[must_use]
+    pub fn new(cat: Category) -> Self {
+        return Self {
             time_stamp: Utc::now(),
             category: cat,
         };
@@ -86,43 +87,41 @@ impl Node {
 }
 
 impl State {
+    // const DEFAULT_FILE_NAME: &str = "project.rd";
 
-    // const DEFAULT_FILE_NAME: &str = "project.rd"; 
-
-    pub fn get_state<P: AsRef<Path>>(path: P) -> Result<State, io::Error> {
+    pub fn get_state<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
         // TODO update to add project files and /etc/config file
 
-        let ret = match read(path) {
+        let ret: Self = match read(path) {
             Ok(f) => {
-                // let contents: String = String::from(f); 
-                let x: &[u8] = &f[..]; 
-                match serde_json::from_slice::<State>(x) {
+                // let contents: String = String::from(f);
+                let x: &[u8] = &f[..];
+                match serde_json::from_slice::<Self>(x) {
                     Ok(v) => v,
-                    Err(e) => panic!("There was an error parsing the state. Error: \n{:?}", e),
+                    Err(e) => panic!("There was an error parsing the state. Error: \n{e:?}"),
                 }
-            },
+            }
             Err(e) => {
-                // No file found error. 
+                // No file found error.
 
                 match e.kind() {
-                    ErrorKind::NotFound => {
-                        State::empty()
-                    },
-                    ErrorKind::PermissionDenied => panic!("Permission was denied to access file: \n{:?}", e),
+                    ErrorKind::NotFound => Self::empty(),
+                    ErrorKind::PermissionDenied => {
+                        panic!("Permission was denied to access file: \n{e:?}")
+                    }
                     //ErrorKind::AlreadyExists => unreachable!(),
-                    ErrorKind::InvalidInput => panic!("An invalid input was introduced: \n{:?}", e), 
-                    _ => panic!("An unaccounded error has ocurred: \n{:?}", e),
+                    ErrorKind::InvalidInput => panic!("An invalid input was introduced: \n{e:?}"),
+                    _ => panic!("An unaccounded error has ocurred: \n{e:?}"),
                 }
-            },
-        }; 
+            }
+        };
 
-        return Ok(ret); 
-
+        return Ok(ret);
     }
 
     /// Creates a new empty State
-    pub fn empty() -> State {
+    #[must_use]
+    pub fn empty() -> Self {
         todo!()
     }
-
 }

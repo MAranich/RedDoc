@@ -1,12 +1,12 @@
-//! # RedDoc
+//! # `RedDoc`
 //!
-//! RedDoc is a tool for documentation targeted to cybersecurity profesionals.
+//! `RedDoc` is a tool for documentation targeted to cybersecurity profesionals.
 //!
 //!
 
 use clap::{Arg, ArgMatches, Command, command};
 
-use crate::node::*;
+use crate::node::{Action, Category, Node};
 
 const ABOUT_ACTION_CLAP: &str = "Adds a node that represents an action. ";
 const ABOUT_CONSEQUENCE_CLAP: &str =
@@ -81,10 +81,7 @@ fn process_action(sub_match: &ArgMatches) -> Result<(), ()> {
         Some((ACTION_CUSTOM, raw_content)) => {
             let content: Option<&String> = raw_content.get_one::<String>("content");
 
-            let content: &str = match content {
-                Some(string) => string.as_str(),
-                None => "",
-            };
+            let content: &str = content.map_or("", |string| string.as_str());
 
             Node::new(Category::Action(Action::Custom(String::from(content))))
         }
@@ -92,7 +89,7 @@ fn process_action(sub_match: &ArgMatches) -> Result<(), ()> {
         None => todo!("No action subcommand provided. "),
     };
 
-    println!("New node: \n{:?}", new_node); 
+    println!("New node: \n{new_node:?}");
 
     return Ok(());
 }
