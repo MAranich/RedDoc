@@ -137,3 +137,34 @@ impl Information {
         };
     }
 }
+
+impl PartialOrd for IP {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let ret: std::cmp::Ordering = match (self, other) {
+            (IP::V4(x), IP::V4(y)) => x.cmp(y),
+            (IP::V6(x), IP::V6(y)) => x.cmp(y),
+            (IP::V4(x), IP::V6(y)) => (*x as u64).cmp(y),
+            (IP::V6(x), IP::V4(y)) => x.cmp(&(*y as u64)),
+        }; 
+        return Some(ret); 
+    }
+}
+
+impl Ord for IP {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let ret: std::cmp::Ordering = match (self, other) {
+            (IP::V4(x), IP::V4(y)) => x.cmp(y),
+            (IP::V6(x), IP::V6(y)) => x.cmp(y),
+            (IP::V4(x), IP::V6(y)) => (*x as u64).cmp(y),
+            (IP::V6(x), IP::V4(y)) => x.cmp(&(*y as u64)),
+        }; 
+        return ret; 
+    }
+}
+
+
+
+
+
+
+
