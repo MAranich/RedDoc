@@ -8,7 +8,7 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::read,
-    io::{self, ErrorKind},
+    io::{self, ErrorKind, Write},
     path::Path,
 };
 
@@ -119,9 +119,34 @@ impl State {
         return Ok(ret);
     }
 
+    pub fn save_state<P: AsRef<Path>>(path: P, state: &State) -> Result<(), io::Error> {
+        let state_text: String = match serde_json::to_string(state) {
+            Ok(json) => json,
+            Err(e) => panic!("Error trasforming data to JSON. Error: \n{e:?}"),
+        };
+
+        let data: &[u8] = state_text.as_bytes();
+
+        let mut file: std::fs::File = std::fs::OpenOptions::new().write(true).truncate(true).open("./file")?;
+
+        let out: Result<(), io::Error> = file.write_all(data); 
+        let _ = out?; 
+
+        return Ok(());
+    }
+
     /// Creates a new empty State
     #[must_use]
     pub fn empty() -> Self {
-        todo!()
+        return Self {
+            time_line: Timeline::new(),
+            information: Information::new(),
+        };
+    }
+}
+
+impl Timeline {
+    pub fn new() -> Self {
+        return Self(Vec::new());
     }
 }

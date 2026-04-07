@@ -122,3 +122,18 @@ pub enum Credential {
     Token(String),
     PrivateKey(String),
 }
+
+impl Information {
+    /// Creates empty Information struct
+    pub fn new() -> Self {
+        return Self {
+            computers: Vec::new(),
+            ips: Vec::new(),
+            software: Vec::new(),
+            vulnerabilities: Vec::new(),
+            domains: Vec::new(),
+            users: Vec::new(),
+            facts: Vec::new(),
+        };
+    }
+}

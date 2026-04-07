@@ -4,9 +4,11 @@
 //!
 //!
 
+use std::path::Path;
+
 use clap::{Arg, ArgMatches, Command, command};
 
-use crate::node::{Action, Category, Node};
+use crate::node::{Action, Category, Node, State};
 
 const ABOUT_ACTION_CLAP: &str = "Adds a node that represents an action. ";
 const ABOUT_CONSEQUENCE_CLAP: &str =
@@ -65,14 +67,20 @@ fn main() {
         )
         .get_matches();
 
+    // //////////
+
+
+    let project_directory: &str = "./";
+    let mut state: State= State::get_state(Path::new(project_directory)).expect("Error obtaining project information. ");
+
     let _ = match matches.subcommand() {
-        Some((SUB_ACTION, sub_match)) => process_action(sub_match),
+        Some((SUB_ACTION, sub_match)) => process_action(sub_match, &mut state),
         Some(_) => todo!("Unrecognized subcommand provided"),
         None => todo!("No subcommand provided. "),
     };
 }
 
-fn process_action(sub_match: &ArgMatches) -> Result<(), ()> {
+fn process_action(sub_match: &ArgMatches, state: &mut State) -> Result<(), ()> {
     if DEBUG_MODE {
         println!("Action detected! Processing...");
     }
