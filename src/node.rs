@@ -3,9 +3,14 @@
 //! for storing the information.
 //!
 
-use crate::information::InfoRef;
+use crate::information::{InfoRef, Information};
 use chrono::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs::read,
+    io::{self, ErrorKind},
+    path::Path,
+};
 
 /// Basic structure that stores the relevant information
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,9 +43,7 @@ pub enum Action {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnownCommnad {
-    A,
-    B,
-    C,
+    None,
 } // TODO
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +69,13 @@ pub enum Event {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Timeline(Vec<Node>);
 
+/// Represents all the information known by the program
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct State {
+    time_line: Timeline,
+    information: Information,
+}
+
 impl Node {
     pub fn new(cat: Category) -> Node {
         return Node {
@@ -73,4 +83,46 @@ impl Node {
             category: cat,
         };
     }
+}
+
+impl State {
+
+    // const DEFAULT_FILE_NAME: &str = "project.rd"; 
+
+    pub fn get_state<P: AsRef<Path>>(path: P) -> Result<State, io::Error> {
+        // TODO update to add project files and /etc/config file
+
+        let ret = match read(path) {
+            Ok(f) => {
+                // let contents: String = String::from(f); 
+                let x: &[u8] = &f[..]; 
+                match serde_json::from_slice::<State>(x) {
+                    Ok(v) => v,
+                    Err(e) => panic!("There was an error parsing the state. Error: \n{:?}", e),
+                }
+            },
+            Err(e) => {
+                // No file found error. 
+
+                match e.kind() {
+                    ErrorKind::NotFound => {
+                        State::empty()
+                    },
+                    ErrorKind::PermissionDenied => panic!("Permission was denied to access file: \n{:?}", e),
+                    //ErrorKind::AlreadyExists => unreachable!(),
+                    ErrorKind::InvalidInput => panic!("An invalid input was introduced: \n{:?}", e), 
+                    _ => panic!("An unaccounded error has ocurred: \n{:?}", e),
+                }
+            },
+        }; 
+
+        return Ok(ret); 
+
+    }
+
+    /// Creates a new empty State
+    pub fn empty() -> State {
+        todo!()
+    }
+
 }
