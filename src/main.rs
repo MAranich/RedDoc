@@ -4,11 +4,14 @@
 //!
 //!
 
-use std::path::Path;
+use std::{
+    io::{self, Read},
+    path::Path,
+};
 
 use clap::{Arg, ArgMatches, Command, command};
 
-use crate::node::{Action, Category, Node, State};
+use crate::node::{Action, Consequence, Event, Category, Node, State};
 
 const ABOUT_ACTION_CLAP: &str = "Adds a node that represents an action. ";
 const ABOUT_CONSEQUENCE_CLAP: &str =
@@ -54,7 +57,6 @@ const EVENT_CUSTOM_ABOUT: &str =
 This option can be used to store: 
  - Comments
  - Scenatios not accounted in the program. ";
-
 
 pub mod information;
 pub mod node;
@@ -136,19 +138,34 @@ fn process_action(sub_match: &ArgMatches, state: &mut State) {
         println!("Action detected! Processing...");
     }
 
-    let new_node: Node = match sub_match.subcommand() {
+    let new_node: Option<Node> = match sub_match.subcommand() {
         Some((ACTION_CUSTOM, raw_content)) => {
-            let content: Option<&String> = raw_content.get_one::<String>("content");
+            let contents: String = handle_custom_subcommand(raw_content);
 
-            let content: &str = content.map_or("", |string| string.as_str());
-
-            Node::new(Category::Action(Action::Custom(String::from(content))))
+            if contents.is_empty() {
+                None
+            } else {
+                Some(Node::new(Category::Action(Action::Custom(String::from(
+                    contents,
+                )))))
+            }
         }
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
 
-    println!("New node: \n{new_node:?}");
+    if let None = new_node {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
+        return;
+    }
+
+    let new_node: Node = new_node.expect("To contain the Some variant. ");
+
+    if DEBUG_MODE {
+        println!("New node: \n{new_node:?}");
+    }
 
     state.add_node(&new_node);
 }
@@ -158,21 +175,34 @@ fn process_consequences(sub_match: &ArgMatches, state: &mut State) {
         println!("Consequence detected! Processing...");
     }
 
-    let new_node: Node = match sub_match.subcommand() {
+    let new_node: Option<Node> = match sub_match.subcommand() {
         Some((CONSEQUENCE_CUSTOM, raw_content)) => {
-            let content: Option<&String> = raw_content.get_one::<String>("content");
+            let contents: String = handle_custom_subcommand(raw_content);
 
-            let content: &str = content.map_or("", |string| string.as_str());
-
-            Node::new(Category::Consequence(node::Consequence::Custom(
-                String::from(content),
-            )))
+            if contents.is_empty() {
+                None
+            } else {
+                Some(Node::new(Category::Consequence(Consequence::Custom(String::from(
+                    contents,
+                )))))
+            }
         }
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
 
-    println!("New node: \n{new_node:?}");
+    if let None = new_node {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
+        return;
+    }
+
+    let new_node: Node = new_node.expect("To contain the Some variant. ");
+
+    if DEBUG_MODE {
+        println!("New node: \n{new_node:?}");
+    }
 
     state.add_node(&new_node);
 }
@@ -182,19 +212,86 @@ fn process_event(sub_match: &ArgMatches, state: &mut State) {
         println!("Event detected! Processing...");
     }
 
-    let new_node: Node = match sub_match.subcommand() {
+    let new_node: Option<Node> = match sub_match.subcommand() {
         Some((EVENT_CUSTOM, raw_content)) => {
-            let content: Option<&String> = raw_content.get_one::<String>("content");
+            let contents: String = handle_custom_subcommand(raw_content);
 
-            let content: &str = content.map_or("", |string| string.as_str());
-
-            Node::new(Category::Event(node::Event::Custom(String::from(content))))
+            if contents.is_empty() {
+                None
+            } else {
+                Some(Node::new(Category::Event(Event::Custom(String::from(
+                    contents,
+                )))))
+            }
         }
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
 
-    println!("New node: \n{new_node:?}");
+    if let None = new_node {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
+        return;
+    }
+
+    let new_node: Node = new_node.expect("To contain the Some variant. ");
+
+    if DEBUG_MODE {
+        println!("New node: \n{new_node:?}");
+    }
 
     state.add_node(&new_node);
+}
+
+/// Returns a strig containing the standard input.
+///
+/// Empty if noting was provided.
+pub fn get_stdin() -> String {
+    let mut ret: String = String::new();
+    io::stdin()
+        .read_to_string(&mut ret)
+        .expect("No error readin from stdin. ");
+
+    return ret;
+}
+
+pub fn handle_custom_subcommand(raw_content: &ArgMatches) -> String {
+    // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
+    /*
+       We need to check if we got the values from the argument or stdin and handle each case:
+        - Both argument and stdin: send warning, concatenate inputs and save.
+        - Neither argument not stdin: send error message and do nothing.
+    */
+
+    // content obtained from the argument
+    let content_arg_opt: Option<&String> = raw_content.get_one::<String>("content");
+    let exists_content_arg: bool = !content_arg_opt.is_none_or(|s: &String| s.trim().is_empty());
+    let mut content_arg: String = content_arg_opt.map(|s| s.clone()).unwrap_or_default();
+
+    let content_stdin: String = get_stdin();
+    let exists_std_input: bool = !content_stdin.trim().is_empty();
+
+    let content: String = match (exists_content_arg, exists_std_input) {
+        (true, true) => {
+            println!(
+                "Info: There were inputs on both argument and stdin. The stdin was concatenated to the argument. "
+            );
+            // add some space
+            content_arg.push_str("\n\n\n");
+
+            content_arg.push_str(&content_stdin);
+            content_arg
+        }
+        (true, false) => content_arg,
+        (false, true) => content_stdin,
+        (false, false) => {
+            eprintln!(
+                "Error: No information was provided through the standard input (piped) nor a as raw text. \nNo action was taken. "
+            );
+            return String::new();
+        }
+    };
+
+    return content;
 }
