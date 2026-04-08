@@ -1,26 +1,18 @@
 {
     "time_line": [
         {
-            "time_stamp": "2026-04-08T08:15:57.964976810Z",
+            "time_stamp": "2026-04-08T08:30:47.335989501Z",
             "category": {
                 "Action": {
-                    "Custom": "Hello Earth!"
+                    "Custom": "Created capitalism. "
                 }
             }
         },
         {
-            "time_stamp": "2026-04-08T08:16:20.578854562Z",
+            "time_stamp": "2026-04-08T08:30:52.756693450Z",
             "category": {
-                "Action": {
-                    "Custom": "Hello Earth!"
-                }
-            }
-        },
-        {
-            "time_stamp": "2026-04-08T08:16:36.103003271Z",
-            "category": {
-                "Action": {
-                    "Custom": "Hello World!"
+                "Consequence": {
+                    "Custom": "Poverty and inequality. "
                 }
             }
         }
