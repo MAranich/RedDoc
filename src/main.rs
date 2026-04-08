@@ -70,7 +70,7 @@ fn main() {
     // //////////
 
 
-    let project_directory: &str = "./";
+    let project_directory: &str = "./project.json";
     let mut state: State= State::get_state(Path::new(project_directory)).expect("Error obtaining project information. ");
 
     let _ = match matches.subcommand() {
@@ -78,6 +78,13 @@ fn main() {
         Some(_) => todo!("Unrecognized subcommand provided"),
         None => todo!("No subcommand provided. "),
     };
+
+    let save_result: Result<(), std::io::Error> = State::save_state(project_directory, &state); 
+    if let Err(e) = save_result {
+        println!("There has been an error storing the state. Error: \n{e:?}"); 
+    }
+
+
 }
 
 fn process_action(sub_match: &ArgMatches, state: &mut State) -> Result<(), ()> {
@@ -98,6 +105,8 @@ fn process_action(sub_match: &ArgMatches, state: &mut State) -> Result<(), ()> {
     };
 
     println!("New node: \n{new_node:?}");
+
+    state.add_node(&new_node);
 
     return Ok(());
 }

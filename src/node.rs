@@ -125,12 +125,24 @@ impl State {
             Err(e) => panic!("Error trasforming data to JSON. Error: \n{e:?}"),
         };
 
+        /*
+         - If file exists: 
+             - Open file
+             - Overwrite all of it's contents with the new contents. 
+         - If the file does not exist: 
+             - Create new file
+             - Write the new contents in it. 
+         */
         let data: &[u8] = state_text.as_bytes();
 
-        let mut file: std::fs::File = std::fs::OpenOptions::new().write(true).truncate(true).open("./file")?;
+        let mut file: std::fs::File = std::fs::OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)?;
 
-        let out: Result<(), io::Error> = file.write_all(data); 
-        let _ = out?; 
+        let out: Result<(), io::Error> = file.write_all(data);
+        let _ = out?;
 
         return Ok(());
     }
@@ -142,6 +154,10 @@ impl State {
             time_line: Timeline::new(),
             information: Information::new(),
         };
+    }
+
+    pub fn add_node(&mut self, node: &Node) {
+        self.time_line.0.push(node.clone());
     }
 }
 
