@@ -5,7 +5,7 @@
 //!
 use atty::Stream;
 use std::{
-    io::{self, BufRead, Read},
+    io::{self, Read},
     path::Path,
 };
 
@@ -63,6 +63,8 @@ This option can be used to store:
  - Comments
  - Scenatios not accounted in the program. ";
 
+const MAX_CHARS_CUSTOM_REPORT: usize = 64; 
+
 pub mod action;
 pub mod consequences;
 pub mod event;
@@ -119,6 +121,10 @@ fn main() {
             Command::new(SUB_CONFIG)
                 .about(ABOUT_CONFIG_CLAP)
                 .alias("conf"),
+        )
+                .subcommand(
+            Command::new(SUB_REPORT)
+                .about("Generate a report of the collected data. ")
         )
         .get_matches();
 

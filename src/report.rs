@@ -86,13 +86,12 @@ fn time_line_to_markdown(time_line: &Timeline) -> String {
 
     // Now the groups themselves are sorted. 
 
-    let size_heuristic: usize = time_line.0.len() * 20; 
-    let mut ret: String = String::with_capacity(size_heuristic); 
+    let mut ret: String = String::from("## Timeline of events\n\n"); 
     let mut aux: String = String::new(); 
 
     for collection in group_by_day {
         aux.clear();
-        aux = format!(" - {}: \n", collection.0); 
+        aux = format!(" - {}: \n", collection.0.format("%d/%m/%Y").to_string()); 
         ret.push_str(&aux);
 
         
@@ -101,7 +100,7 @@ fn time_line_to_markdown(time_line: &Timeline) -> String {
             aux.clear();
             let current: &crate::node::Node = time_line.0.get(i).expect("Valid index. "); 
             let time: chrono::NaiveTime = current.time_stamp.time(); 
-            aux = format!("{}: {}", time.format("%H:%M").to_string(), current.category.to_string()); 
+            aux = format!("     - {}: {}\n", time.format("%H:%M").to_string(), current.category.to_string()); 
             ret.push_str(&aux);
 
         }

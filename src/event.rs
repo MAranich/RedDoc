@@ -2,8 +2,7 @@ use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DEBUG_MODE, EVENT_CUSTOM,
-    node::{Category, Node, State},
+    DEBUG_MODE, EVENT_CUSTOM, MAX_CHARS_CUSTOM_REPORT, node::{Category, Node, State}
 };
 
 
@@ -17,7 +16,29 @@ pub enum Event {
 impl ToString for Event {
     fn to_string(&self) -> String {
         match self {
-            Event::Custom(content) => format!("custom: {content}"),
+            Event::Custom(content) => {
+                // remove unnecessary whitespace
+                let mut curated: &str = content.trim();
+                // set maximum length for convenience.
+
+                let mut clamped = ""; 
+
+                if MAX_CHARS_CUSTOM_REPORT < curated.len() {
+                    curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
+                    clamped = "..."; 
+                }
+                
+                // reduce size if /n was found
+                curated = match curated.find('\n') {
+                    Some(i) => {
+                        clamped = "..."; 
+                        &curated[..i]
+                    },
+                    None => curated,
+                };
+
+                format!("custom: {curated}{clamped}")
+            },
             _ => todo!("Currently not implemented. ")
         }
     }

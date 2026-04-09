@@ -2,10 +2,9 @@ use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ACTION_CUSTOM, DEBUG_MODE, get_stdin,
+    ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT, get_stdin,
     node::{Category, KnownCommnad, Node, State},
 };
-
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Action {
@@ -18,12 +17,33 @@ pub enum Action {
     // Script(String)
 }
 
-
 impl ToString for Action {
     fn to_string(&self) -> String {
         match self {
-            Action::Custom(content) => format!("custom: {content}"),
-            _ => todo!("Currently not implemented. ")
+            Action::Custom(content) => {
+                // remove unnecessary whitespace
+                let mut curated: &str = content.trim();
+                // set maximum length for convenience.
+
+                let mut clamped = ""; 
+
+                if MAX_CHARS_CUSTOM_REPORT < curated.len() {
+                    curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
+                    clamped = "..."; 
+                }
+                
+                // reduce size if /n was found
+                curated = match curated.find('\n') {
+                    Some(i) => {
+                        clamped = "..."; 
+                        &curated[..i]
+                    },
+                    None => curated,
+                };
+
+                format!("custom: {curated}{clamped}")
+            }
+            _ => todo!("Currently not implemented. "),
         }
     }
 }
@@ -99,7 +119,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
                 "Info: There were inputs on both argument and stdin. The stdin was concatenated to the argument. "
             );
             // add some space
-            content_arg.push_str("\n\n\n");
+            content_arg.push_str("\n\n");
 
             content_arg.push_str(&content_stdin);
             content_arg
@@ -116,6 +136,3 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
 
     return content;
 }
-
-
-
