@@ -31,6 +31,30 @@
                     "Custom": ""
                 }
             }
+        },
+        {
+            "time_stamp": "2026-04-09T13:21:41.840089088Z",
+            "category": {
+                "Consequence": {
+                    "Custom": "cons form arg"
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-04-09T13:22:09.211706474Z",
+            "category": {
+                "Consequence": {
+                    "Custom": "event form both arg and\n\n\npipe\n"
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-04-09T13:23:25.603076069Z",
+            "category": {
+                "Consequence": {
+                    "Custom": "Checking pipes\n"
+                }
+            }
         }
     ],
     "information": {

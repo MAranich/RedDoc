@@ -3,9 +3,9 @@
 //! `RedDoc` is a tool for documentation targeted to cybersecurity profesionals.
 //!
 //!
-
+use atty::Stream;
 use std::{
-    io::{self, Read},
+    io::{self, BufRead, Read},
     path::Path,
 };
 
@@ -156,9 +156,67 @@ fn main() {
 #[must_use]
 pub fn get_stdin() -> String {
     let mut ret: String = String::new();
-    io::stdin()
-        .read_to_string(&mut ret)
-        .expect("No error readin from stdin. ");
+
+    if DEBUG_MODE {
+        println!("\tEntered get_stdin");
+    }
+
+    if atty::is(Stream::Stdin) {
+        if DEBUG_MODE {
+            println!("\tNo pipe detected");
+        }
+    } else {
+        if DEBUG_MODE {
+            println!("\tInput is piped");
+        }
+        let _ = io::stdin()
+            .read_to_string(&mut ret)
+            .expect("\tNo error reading from stdin. ");
+    }
+
+    /*
+
+    if atty::is(atty::Stream::Stdin) {
+        io::stdin()
+            .read_to_string(&mut ret)
+            .expect("No error readin from stdin. ");
+    }
+
+     */
+
+    /*
+     loop {
+        let mut input: String = String::new();
+        match io::stdin().read_line(&mut input) {
+            Ok(len) => {
+                if len == 0 {
+                    println!("Length 0. ");
+                    break;
+                } else {
+                            if DEBUG_MODE {
+                    println!("|{input}|");
+                }
+                    ret.push_str(&input);
+                }
+            }
+            Err(error) => {
+                eprintln!("Error while reading stdin: \n{error}");
+                break;
+            }
+        }
+    }
+    */
+
+    /*
+    let ret = io::stdin()
+        .lock()
+        .lines()
+        .fold("".to_string(), |acc, line| acc + &line.unwrap() + "\n");
+     */
+
+    if DEBUG_MODE {
+        println!("\tExited get_stdin\n\tString obtained form stdin: |{}|", ret.trim());
+    }
 
     return ret;
 }
