@@ -5,6 +5,14 @@ use crate::{
     node::{Category, Event, Node, State},
 };
 
+/// Processes the event
+///
+/// # Panics
+///
+/// Panics if:
+///  - No subcommand was passed
+///  - An unrecognized subcommand was passed.
+///  - Due to other errors caused by the different subcommands.
 pub fn process_event(sub_match: &ArgMatches, state: &mut State) {
     if DEBUG_MODE {
         println!("Event detected! Processing...");
@@ -16,7 +24,7 @@ pub fn process_event(sub_match: &ArgMatches, state: &mut State) {
         None => todo!("No action subcommand provided. "),
     };
 
-    if let None = new_node {
+    if new_node.is_none() {
         if DEBUG_MODE {
             println!("No node has been created. ");
         }
@@ -38,8 +46,6 @@ fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
     if contents.is_empty() {
         None
     } else {
-        Some(Node::new(Category::Event(Event::Custom(String::from(
-            contents,
-        )))))
+        Some(Node::new(Category::Event(Event::Custom(contents))))
     }
 }

@@ -5,18 +5,26 @@ use crate::{
     node::{Action, Category, Node, State},
 };
 
+/// Processes the action
+///
+/// # Panics
+///
+/// Panics if:
+///  - No subcommand was passed
+///  - An unrecognized subcommand was passed.
+///  - Due to other errors caused by the different subcommands.
 pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
     if DEBUG_MODE {
         println!("Action detected! Processing...");
     }
 
     let new_node: Option<Node> = match sub_match.subcommand() {
-        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content), 
+        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content),
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
 
-    if let None = new_node {
+    if new_node.is_none() {
         if DEBUG_MODE {
             println!("No node has been created. ");
         }
@@ -38,15 +46,14 @@ fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
     if contents.is_empty() {
         None
     } else {
-        Some(Node::new(Category::Action(Action::Custom(String::from(
-            contents,
-        )))))
+        Some(Node::new(Category::Action(Action::Custom(contents))))
     }
 }
 
 /// Obtains the string information necessary for the custom subcommands
 ///
 /// Used in both Action, Consequence and Event
+#[must_use]
 pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
     // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
     /*
@@ -58,9 +65,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
     // content obtained from the argument
     let content_arg_opt: Option<&String> = raw_content.get_one::<String>("content");
     let exists_content_arg: bool = !content_arg_opt.is_none_or(|s: &String| s.trim().is_empty());
-    let mut content_arg: String = content_arg_opt
-        .map(|s: &String| s.clone())
-        .unwrap_or_default();
+    let mut content_arg: String = content_arg_opt.cloned().unwrap_or_default();
 
     let content_stdin: String = get_stdin();
     let exists_std_input: bool = !content_stdin.trim().is_empty();

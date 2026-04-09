@@ -66,14 +66,14 @@ pub enum Event {
     Detection,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Timeline(Vec<Node>);
 
 /// Represents all the information known by the program
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
-    time_line: Timeline,
-    information: Information,
+    pub time_line: Timeline,
+    pub information: Information,
 }
 
 impl Node {
@@ -89,7 +89,16 @@ impl Node {
 impl State {
     // const DEFAULT_FILE_NAME: &str = "project.rd";
 
-    pub fn get_state<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
+    /// Reads the contents of the file at the provided `path` and generates a [State] form it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    ///  - There was an error parsing the state.
+    ///      - (from JSON to the internal reperesntation)
+    ///  - Obtained any error (other than `NotFound`) while reading the file.
+    ///
+    pub fn get_state<P: AsRef<Path>>(path: P) -> Self {
         // TODO update to add project files and /etc/config file
 
         let ret: Self = match read(path) {
@@ -116,23 +125,37 @@ impl State {
             }
         };
 
-        return Ok(ret);
+        return ret;
     }
 
-    pub fn save_state<P: AsRef<Path>>(path: P, state: &State) -> Result<(), io::Error> {
+    /// Saves the state in a file provided by `path`.
+    ///
+    /// The file is generated if it does not exist.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there was an eror generating the JSON.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - There was an error creating/opening the report file.
+    /// - There was an error writing into the report file.
+    ///
+    pub fn save_state<P: AsRef<Path>>(path: P, state: &Self) -> Result<(), io::Error> {
         let state_text: String = match serde_json::to_string(state) {
             Ok(json) => json,
             Err(e) => panic!("Error trasforming data to JSON. Error: \n{e:?}"),
         };
 
         /*
-         - If file exists: 
-             - Open file
-             - Overwrite all of it's contents with the new contents. 
-         - If the file does not exist: 
-             - Create new file
-             - Write the new contents in it. 
-         */
+        - If file exists:
+            - Open file
+            - Overwrite all of it's contents with the new contents.
+        - If the file does not exist:
+            - Create new file
+            - Write the new contents in it.
+        */
         let data: &[u8] = state_text.as_bytes();
 
         let mut file: std::fs::File = std::fs::OpenOptions::new()
@@ -142,14 +165,14 @@ impl State {
             .open(path)?;
 
         let out: Result<(), io::Error> = file.write_all(data);
-        let _ = out?;
+        out?;
 
         return Ok(());
     }
 
     /// Creates a new empty State
     #[must_use]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         return Self {
             time_line: Timeline::new(),
             information: Information::new(),
@@ -162,7 +185,8 @@ impl State {
 }
 
 impl Timeline {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         return Self(Vec::new());
     }
 }

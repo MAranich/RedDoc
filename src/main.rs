@@ -13,6 +13,7 @@ use clap::{Arg, Command, command};
 
 use crate::{
     action::process_action, consequences::process_consequences, event::process_event, node::State,
+    report::process_report,
 };
 
 const ABOUT_ACTION_CLAP: &str = "Adds a node that represents an action. ";
@@ -32,6 +33,8 @@ const SUB_EVENT: &str = "event";
 const SUB_COMMAND: &str = "command";
 /// Sub command configuration
 const SUB_CONFIG: &str = "configuration";
+/// Sub command report
+const SUB_REPORT: &str = "report";
 
 // Sub commands for action: **********************************************
 const ACTION_CUSTOM: &str = "custom";
@@ -65,6 +68,7 @@ pub mod consequences;
 pub mod event;
 pub mod information;
 pub mod node;
+pub mod report;
 
 // ****************************
 
@@ -120,19 +124,23 @@ fn main() {
 
     // //////////
 
-    let project_directory: &str = "./project.json";
-    let mut state: State = State::get_state(Path::new(project_directory))
-        .expect("Error obtaining project information. ");
+    let project_path: &Path = Path::new("./project.json");
+    let report_path: &Path = Path::new("./report.md");
 
-    let _ = match matches.subcommand() {
+    let mut state: State = State::get_state(project_path);
+
+    match matches.subcommand() {
         Some((SUB_ACTION, sub_match)) => process_action(sub_match, &mut state),
         Some((SUB_CONSEQUENCE, sub_match)) => process_consequences(sub_match, &mut state),
         Some((SUB_EVENT, sub_match)) => process_event(sub_match, &mut state),
+        Some((SUB_COMMAND, _sub_match)) => todo!("Sub command *command* not implemented yet. "),
+        Some((SUB_CONFIG, _sub_match)) => todo!("Sub command configuration not implemented yet. "),
+        Some((SUB_REPORT, sub_match)) => process_report(sub_match, &mut state, report_path),
         Some(_) => todo!("Unrecognized subcommand provided"),
         None => todo!("No subcommand provided. "),
-    };
+    }
 
-    let save_result: Result<(), std::io::Error> = State::save_state(project_directory, &state);
+    let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
     if let Err(e) = save_result {
         println!("There has been an error storing the state. Error: \n{e:?}");
     }
@@ -141,6 +149,11 @@ fn main() {
 /// Returns a strig containing the standard input.
 ///
 /// Empty if noting was provided.
+///
+/// # Panics
+///
+/// Panics if there was an error reading from stdin
+#[must_use]
 pub fn get_stdin() -> String {
     let mut ret: String = String::new();
     io::stdin()

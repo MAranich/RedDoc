@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Information that has been obtained
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Information {
     pub computers: Vec<Computer>,
     pub ips: Vec<IP>,
@@ -125,7 +125,8 @@ pub enum Credential {
 
 impl Information {
     /// Creates empty Information struct
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         return Self {
             computers: Vec::new(),
             ips: Vec::new(),
@@ -140,31 +141,18 @@ impl Information {
 
 impl PartialOrd for IP {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        let ret: std::cmp::Ordering = match (self, other) {
-            (IP::V4(x), IP::V4(y)) => x.cmp(y),
-            (IP::V6(x), IP::V6(y)) => x.cmp(y),
-            (IP::V4(x), IP::V6(y)) => (*x as u64).cmp(y),
-            (IP::V6(x), IP::V4(y)) => x.cmp(&(*y as u64)),
-        }; 
-        return Some(ret); 
+        return Some(self.cmp(other));
     }
 }
 
 impl Ord for IP {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let ret: std::cmp::Ordering = match (self, other) {
-            (IP::V4(x), IP::V4(y)) => x.cmp(y),
-            (IP::V6(x), IP::V6(y)) => x.cmp(y),
-            (IP::V4(x), IP::V6(y)) => (*x as u64).cmp(y),
-            (IP::V6(x), IP::V4(y)) => x.cmp(&(*y as u64)),
-        }; 
-        return ret; 
+            (Self::V4(x), Self::V4(y)) => x.cmp(y),
+            (Self::V6(x), Self::V6(y)) => x.cmp(y),
+            (Self::V4(x), Self::V6(y)) => u64::from(*x).cmp(y),
+            (Self::V6(x), Self::V4(y)) => x.cmp(&u64::from(*y)),
+        };
+        return ret;
     }
 }
-
-
-
-
-
-
-
