@@ -20,26 +20,23 @@ pub enum Action {
 impl ToString for Action {
     fn to_string(&self) -> String {
         match self {
-            Action::Custom(content) => {
+            Self::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
 
-                let mut clamped = ""; 
-
-                if MAX_CHARS_CUSTOM_REPORT < curated.len() {
+                let mut clamped: &str = if MAX_CHARS_CUSTOM_REPORT < curated.len() {
                     curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
-                    clamped = "..."; 
-                }
-                
-                // reduce size if /n was found
-                curated = match curated.find('\n') {
-                    Some(i) => {
-                        clamped = "..."; 
-                        &curated[..i]
-                    },
-                    None => curated,
+                    "..."
+                } else {
+                    ""
                 };
+
+                // reduce size if /n was found
+                curated = curated.find('\n').map_or(curated, |i| {
+                    clamped = "...";
+                    &curated[..i]
+                });
 
                 format!("custom: {curated}{clamped}")
             }

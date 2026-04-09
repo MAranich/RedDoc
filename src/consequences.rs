@@ -2,7 +2,9 @@ use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CONSEQUENCE_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT, information::InfoRef, node::{Category, Node, State}
+    CONSEQUENCE_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
+    information::InfoRef,
+    node::{Category, Node, State},
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,34 +23,30 @@ pub enum Consequence {
 impl ToString for Consequence {
     fn to_string(&self) -> String {
         match self {
-            Consequence::Custom(content) => {
+            Self::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
 
-                let mut clamped = ""; 
-
-                if MAX_CHARS_CUSTOM_REPORT < curated.len() {
+                let mut clamped: &str = if MAX_CHARS_CUSTOM_REPORT < curated.len() {
                     curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
-                    clamped = "..."; 
-                }
-                
-                // reduce size if /n was found
-                curated = match curated.find('\n') {
-                    Some(i) => {
-                        clamped = "..."; 
-                        &curated[..i]
-                    },
-                    None => curated,
+                    "..."
+                } else {
+                    ""
                 };
 
+                // reduce size if /n was found
+                curated = curated.find('\n').map_or(curated, |i| {
+                    clamped = "...";
+                    &curated[..i]
+                });
+
                 format!("custom: {curated}{clamped}")
-            },
-            _ => todo!("Currently not implemented. ")
+            }
+            _ => todo!("Currently not implemented. "),
         }
     }
 }
-
 
 /// Processes the consequence
 ///

@@ -2,9 +2,9 @@ use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DEBUG_MODE, EVENT_CUSTOM, MAX_CHARS_CUSTOM_REPORT, node::{Category, Node, State}
+    DEBUG_MODE, EVENT_CUSTOM, MAX_CHARS_CUSTOM_REPORT,
+    node::{Category, Node, State},
 };
-
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Event {
@@ -16,30 +16,27 @@ pub enum Event {
 impl ToString for Event {
     fn to_string(&self) -> String {
         match self {
-            Event::Custom(content) => {
+            Self::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
 
-                let mut clamped = ""; 
-
-                if MAX_CHARS_CUSTOM_REPORT < curated.len() {
+                let mut clamped: &str = if MAX_CHARS_CUSTOM_REPORT < curated.len() {
                     curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
-                    clamped = "..."; 
-                }
-                
-                // reduce size if /n was found
-                curated = match curated.find('\n') {
-                    Some(i) => {
-                        clamped = "..."; 
-                        &curated[..i]
-                    },
-                    None => curated,
+                    "..."
+                } else {
+                    ""
                 };
 
+                // reduce size if /n was found
+                curated = curated.find('\n').map_or(curated, |i| {
+                    clamped = "...";
+                    &curated[..i]
+                });
+
                 format!("custom: {curated}{clamped}")
-            },
-            _ => todo!("Currently not implemented. ")
+            }
+            Self::Detection => todo!("Currently not implemented. "),
         }
     }
 }

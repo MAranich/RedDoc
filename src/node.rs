@@ -30,14 +30,10 @@ pub enum Category {
     Event(Event),
 }
 
-
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnownCommnad {
     None,
 } // TODO
-
-
-
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Timeline(pub Vec<Node>);
@@ -173,22 +169,9 @@ impl ToString for Node {
 impl ToString for Category {
     fn to_string(&self) -> String {
         match self {
-            Category::Action(action) => format!("Action {}", action.to_string()),
-            Category::Consequence(consequence) => format!("Consequence: {}", consequence.to_string()),
-            Category::Event(event) => format!("Event: {}", event.to_string()),
+            Self::Action(action) => format!("Action {}", action.to_string()),
+            Self::Consequence(consequence) => format!("Consequence: {}", consequence.to_string()),
+            Self::Event(event) => format!("Event: {}", event.to_string()),
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

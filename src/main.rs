@@ -63,7 +63,7 @@ This option can be used to store:
  - Comments
  - Scenatios not accounted in the program. ";
 
-const MAX_CHARS_CUSTOM_REPORT: usize = 64; 
+const MAX_CHARS_CUSTOM_REPORT: usize = 64;
 
 pub mod action;
 pub mod consequences;
@@ -122,10 +122,7 @@ fn main() {
                 .about(ABOUT_CONFIG_CLAP)
                 .alias("conf"),
         )
-                .subcommand(
-            Command::new(SUB_REPORT)
-                .about("Generate a report of the collected data. ")
-        )
+        .subcommand(Command::new(SUB_REPORT).about("Generate a report of the collected data. "))
         .get_matches();
 
     // //////////
@@ -221,7 +218,10 @@ pub fn get_stdin() -> String {
      */
 
     if DEBUG_MODE {
-        println!("\tExited get_stdin\n\tString obtained form stdin: |{}|", ret.trim());
+        println!(
+            "\tExited get_stdin\n\tString obtained form stdin: |{}|",
+            ret.trim()
+        );
     }
 
     return ret;
