@@ -1,9 +1,32 @@
 use clap::ArgMatches;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ACTION_CUSTOM, DEBUG_MODE, get_stdin,
-    node::{Action, Category, Node, State},
+    node::{Category, KnownCommnad, Node, State},
 };
+
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Action {
+    /// A custom action, the user may store any string
+    Custom(String),
+    /// The execution of a command (the output is sored in another node)
+    Command(String),
+    KnownCommnad(KnownCommnad),
+    // /// Execution of a script, string is for the code
+    // Script(String)
+}
+
+
+impl ToString for Action {
+    fn to_string(&self) -> String {
+        match self {
+            Action::Custom(content) => format!("custom: {content}"),
+            _ => todo!("Currently not implemented. ")
+        }
+    }
+}
 
 /// Processes the action
 ///
@@ -93,3 +116,6 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
 
     return content;
 }
+
+
+

@@ -1,9 +1,32 @@
 use clap::ArgMatches;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    CONSEQUENCE_CUSTOM, DEBUG_MODE,
-    node::{Category, Consequence, Node, State},
+    CONSEQUENCE_CUSTOM, DEBUG_MODE, information::InfoRef, node::{Category, Node, State}
 };
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Consequence {
+    Custom(String),
+    /// Output of a command
+    Command(String),
+    NewInformation(InfoRef),
+    /// The Blue team (Defenders) have discovered the activity.
+    Detection,
+    /// No consequence for the previous action
+    None,
+    // Unresolved(String)
+}
+
+impl ToString for Consequence {
+    fn to_string(&self) -> String {
+        match self {
+            Consequence::Custom(content) => format!("custom: {content}"),
+            _ => todo!("Currently not implemented. ")
+        }
+    }
+}
+
 
 /// Processes the consequence
 ///

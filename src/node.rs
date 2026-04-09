@@ -3,7 +3,7 @@
 //! for storing the information.
 //!
 
-use crate::information::{InfoRef, Information};
+use crate::{action::Action, consequences::Consequence, event::Event, information::Information};
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -15,8 +15,8 @@ use std::{
 /// Basic structure that stores the relevant information
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Node {
-    time_stamp: DateTime<Utc>,
-    category: Category,
+    pub time_stamp: DateTime<Utc>,
+    pub category: Category,
 }
 
 /// The different classes of events that can happen:
@@ -30,44 +30,17 @@ pub enum Category {
     Event(Event),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Action {
-    /// A custom action, the user may store any string
-    Custom(String),
-    /// The execution of a command (the output is sored in another node)
-    Command(String),
-    KnownCommnad(KnownCommnad),
-    // /// Execution of a script, string is for the code
-    // Script(String)
-}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnownCommnad {
     None,
 } // TODO
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Consequence {
-    Custom(String),
-    /// Output of a command
-    Command(String),
-    NewInformation(InfoRef),
-    /// The Blue team (Defenders) have discovered the activity.
-    Detection,
-    /// No consequence for the previous action
-    None,
-    // Unresolved(String)
-}
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Event {
-    Custom(String),
-    /// The Blue team (Defenders) have discovered the activity.
-    Detection,
-}
+
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct Timeline(Vec<Node>);
+pub struct Timeline(pub Vec<Node>);
 
 /// Represents all the information known by the program
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,3 +163,32 @@ impl Timeline {
         return Self(Vec::new());
     }
 }
+
+impl ToString for Node {
+    fn to_string(&self) -> String {
+        format!("{:?} : {}", self.time_stamp, self.category.to_string())
+    }
+}
+
+impl ToString for Category {
+    fn to_string(&self) -> String {
+        match self {
+            Category::Action(action) => format!("Action {}", action.to_string()),
+            Category::Consequence(consequence) => format!("Consequence: {}", consequence.to_string()),
+            Category::Event(event) => format!("Event: {}", event.to_string()),
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

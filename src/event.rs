@@ -1,9 +1,27 @@
 use clap::ArgMatches;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     DEBUG_MODE, EVENT_CUSTOM,
-    node::{Category, Event, Node, State},
+    node::{Category, Node, State},
 };
+
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Event {
+    Custom(String),
+    /// The Blue team (Defenders) have discovered the activity.
+    Detection,
+}
+
+impl ToString for Event {
+    fn to_string(&self) -> String {
+        match self {
+            Event::Custom(content) => format!("custom: {content}"),
+            _ => todo!("Currently not implemented. ")
+        }
+    }
+}
 
 /// Processes the event
 ///
