@@ -4,15 +4,15 @@
 //!
 //!
 use atty::Stream;
+use clap::{Arg, ArgAction, Command, builder::OsStr, command};
 use std::{
+    env,
     io::{self, Read},
     path::Path,
 };
 
-use clap::{Arg, Command, command};
-
 use crate::{
-    action::process_action, consequences::process_consequences, event::process_event, node::State,
+    action::{process_action, process_command}, consequences::process_consequences, event::process_event, node::State,
     report::process_report,
 };
 
@@ -29,12 +29,14 @@ const SUB_ACTION: &str = "action";
 const SUB_CONSEQUENCE: &str = "consequence";
 /// Sub command event
 const SUB_EVENT: &str = "event";
-/// Sub command *command*
-const SUB_COMMAND: &str = "command";
 /// Sub command configuration
 const SUB_CONFIG: &str = "configuration";
 /// Sub command report
 const SUB_REPORT: &str = "report";
+
+/// Sub command *command*
+const SUB_COMMAND: &str = "command";
+const SUB_COMMAND_ALIAS: [&str;4] = [SUB_COMMAND, "comm", "com", "c"]; 
 
 // Sub commands for action: **********************************************
 const ACTION_CUSTOM: &str = "custom";
@@ -77,6 +79,16 @@ pub mod report;
 const DEBUG_MODE: bool = true;
 
 fn main() {
+    let raw_arguments: env::ArgsOs = env::args_os();
+    
+    if let Some(sub_command) = raw_arguments.into_iter().skip(1).next() {
+        let second_arg: String = sub_command.into_string().unwrap_or_default(); 
+        let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg); 
+        if is_second_arg_command {
+            process_command();
+        }
+    }
+
     let matches: clap::ArgMatches = command!()
         .subcommand(
             Command::new(SUB_ACTION)
@@ -115,7 +127,8 @@ fn main() {
                 .about(ABOUT_COMMAND_CLAP)
                 .alias("comm")
                 .alias("com")
-                .alias("c"),
+                .alias("c")
+                .arg(Arg::new("command").action(ArgAction::Append)),
         )
         .subcommand(
             Command::new(SUB_CONFIG)

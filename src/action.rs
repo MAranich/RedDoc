@@ -133,3 +133,8 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
 
     return content;
 }
+
+pub fn process_command() {
+    todo!(); 
+}
+
