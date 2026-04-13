@@ -1,3 +1,13 @@
+//! # Action
+//! 
+//! Actions represent the decisions that the user takes. See [Action]
+//! 
+//! ## Note
+//! 
+//! This module also contains the implementation for the subcommand *command*. 
+//! 
+//! 
+
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +36,7 @@ impl ToString for Action {
                 // set maximum length for convenience.
 
                 let mut clamped: &str = if MAX_CHARS_CUSTOM_REPORT < curated.len() {
-                    curated = &curated[..MAX_CHARS_CUSTOM_REPORT.min(curated.len())];
+                    curated = &curated[..MAX_CHARS_CUSTOM_REPORT];
                     "..."
                 } else {
                     ""
