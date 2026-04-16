@@ -4,7 +4,7 @@
 //!
 //!
 use atty::Stream;
-use clap::{Arg, ArgAction, Command, builder::OsStr, command};
+use clap::{Arg, ArgAction, Command, command};
 use std::{
     env,
     io::{self, Read},
@@ -12,7 +12,10 @@ use std::{
 };
 
 use crate::{
-    action::{process_action, process_command}, consequences::process_consequences, event::process_event, node::State,
+    action::{process_action, process_command},
+    consequences::process_consequences,
+    event::process_event,
+    node::State,
     report::process_report,
 };
 
@@ -36,7 +39,7 @@ const SUB_REPORT: &str = "report";
 
 /// Sub command *command*
 const SUB_COMMAND: &str = "command";
-const SUB_COMMAND_ALIAS: [&str;4] = [SUB_COMMAND, "comm", "com", "c"]; 
+const SUB_COMMAND_ALIAS: [&str; 4] = [SUB_COMMAND, "comm", "com", "c"];
 
 // Sub commands for action: **********************************************
 const ACTION_CUSTOM: &str = "custom";
@@ -79,11 +82,23 @@ pub mod report;
 const DEBUG_MODE: bool = true;
 
 fn main() {
-    let raw_arguments: env::ArgsOs = env::args_os();
-    
+    /*
+       The subcommand *command* needs to be parsed differently to the resto of
+       commands because clap is not able to correcly parse all commands.
+
+       For example, clap would parse `rd command ls -la` with a "-la" flag,
+       wich is not the intended use.
+
+       For this reason we will detect the use of the subcommand *command* and parse it manually.
+    */
+
+    let raw_arguments: env::ArgsOs = env::args_os(); 
+    // `stdin == ""` => Nothing was piped
+    let stdin: String = get_stdin(); 
+
     if let Some(sub_command) = raw_arguments.into_iter().skip(1).next() {
-        let second_arg: String = sub_command.into_string().unwrap_or_default(); 
-        let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg); 
+        let second_arg: String = sub_command.into_string().unwrap_or_default();
+        let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg);
         if is_second_arg_command {
             process_command();
         }
@@ -146,19 +161,27 @@ fn main() {
     let mut state: State = State::get_state(project_path);
 
     match matches.subcommand() {
-        Some((SUB_ACTION, sub_match)) => process_action(sub_match, &mut state),
-        Some((SUB_CONSEQUENCE, sub_match)) => process_consequences(sub_match, &mut state),
-        Some((SUB_EVENT, sub_match)) => process_event(sub_match, &mut state),
-        Some((SUB_COMMAND, _sub_match)) => todo!("Sub command *command* not implemented yet. "),
+        Some((SUB_ACTION, sub_match)) => process_action(sub_match, stdin, &mut state),
+        Some((SUB_CONSEQUENCE, sub_match)) => process_consequences(sub_match, stdin, &mut state),
+        Some((SUB_EVENT, sub_match)) => process_event(sub_match, stdin, &mut state),
         Some((SUB_CONFIG, _sub_match)) => todo!("Sub command configuration not implemented yet. "),
-        Some((SUB_REPORT, sub_match)) => process_report(sub_match, &mut state, report_path),
-        Some(_) => todo!("Unrecognized subcommand provided"),
-        None => todo!("No subcommand provided. "),
+        Some((SUB_REPORT, sub_match)) => process_report(sub_match, stdin, &mut state, report_path),
+        Some((SUB_COMMAND, _sub_match)) => unreachable!(
+            "Sub command *command* should not be reachable through this execution path. "
+        ),
+        Some(_) => {
+            eprintln!("Unrecognized subcommand provided. ");
+            return;
+        }
+        None => {
+            eprintln!("No subcommand provided. ");
+            return;
+        }
     }
 
     let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
     if let Err(e) = save_result {
-        println!("There has been an error storing the state. Error: \n{e:?}");
+        eprintln!("There has been an error storing the state. Error: \n{e:?}");
     }
 }
 

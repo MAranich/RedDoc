@@ -1,3 +1,5 @@
+use std::env;
+
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
@@ -53,13 +55,13 @@ impl ToString for Action {
 ///  - No subcommand was passed
 ///  - An unrecognized subcommand was passed.
 ///  - Due to other errors caused by the different subcommands.
-pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
+pub fn process_action(sub_match: &ArgMatches, stdin: String, state: &mut State) {
     if DEBUG_MODE {
         println!("Action detected! Processing...");
     }
 
     let new_node: Option<Node> = match sub_match.subcommand() {
-        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content),
+        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content, stdin),
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
@@ -80,8 +82,8 @@ pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
     state.add_node(&new_node);
 }
 
-fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
-    let contents: String = handle_general_custom(raw_content);
+fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: String) -> Option<Node> {
+    let contents: String = handle_general_custom(raw_content, stdin);
 
     if contents.is_empty() {
         None
@@ -94,7 +96,7 @@ fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
 ///
 /// Used in both Action, Consequence and Event
 #[must_use]
-pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
+pub fn handle_general_custom(raw_content: &ArgMatches, stdin: String) -> String {
     // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
     /*
        We need to check if we got the values from the argument or stdin and handle each case:
@@ -107,8 +109,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
     let exists_content_arg: bool = !content_arg_opt.is_none_or(|s: &String| s.trim().is_empty());
     let mut content_arg: String = content_arg_opt.cloned().unwrap_or_default();
 
-    let content_stdin: String = get_stdin();
-    let exists_std_input: bool = !content_stdin.trim().is_empty();
+    let exists_std_input: bool = !stdin.trim().is_empty();
 
     let content: String = match (exists_content_arg, exists_std_input) {
         (true, true) => {
@@ -118,11 +119,11 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
             // add some space
             content_arg.push_str("\n\n");
 
-            content_arg.push_str(&content_stdin);
+            content_arg.push_str(&stdin);
             content_arg
         }
         (true, false) => content_arg,
-        (false, true) => content_stdin,
+        (false, true) => stdin,
         (false, false) => {
             eprintln!(
                 "Error: No information was provided through the standard input (piped) nor a as raw text. \nNo action was taken. "
@@ -135,6 +136,10 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
 }
 
 pub fn process_command() {
+
+    let args: env::ArgsOs = env::args_os(); 
+
+
     todo!(); 
 }
 
