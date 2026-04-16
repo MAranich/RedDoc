@@ -1,10 +1,10 @@
-use std::env;
+use std::env::{self, ArgsOs};
 
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT, get_stdin,
+    ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
     node::{Category, KnownCommnad, Node, State},
 };
 
@@ -55,7 +55,7 @@ impl ToString for Action {
 ///  - No subcommand was passed
 ///  - An unrecognized subcommand was passed.
 ///  - Due to other errors caused by the different subcommands.
-pub fn process_action(sub_match: &ArgMatches, stdin: String, state: &mut State) {
+pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
     if DEBUG_MODE {
         println!("Action detected! Processing...");
     }
@@ -82,7 +82,7 @@ pub fn process_action(sub_match: &ArgMatches, stdin: String, state: &mut State) 
     state.add_node(&new_node);
 }
 
-fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: String) -> Option<Node> {
+fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
     let contents: String = handle_general_custom(raw_content, stdin);
 
     if contents.is_empty() {
@@ -96,7 +96,7 @@ fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: String) -> Option<N
 ///
 /// Used in both Action, Consequence and Event
 #[must_use]
-pub fn handle_general_custom(raw_content: &ArgMatches, stdin: String) -> String {
+pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
     // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
     /*
        We need to check if we got the values from the argument or stdin and handle each case:
@@ -123,7 +123,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: String) -> String 
             content_arg
         }
         (true, false) => content_arg,
-        (false, true) => stdin,
+        (false, true) => String::from(stdin),
         (false, false) => {
             eprintln!(
                 "Error: No information was provided through the standard input (piped) nor a as raw text. \nNo action was taken. "
@@ -135,9 +135,9 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: String) -> String 
     return content;
 }
 
-pub fn process_command() {
+pub fn process_command(stdin: &str) {
 
-    let args: env::ArgsOs = env::args_os(); 
+    let args: ArgsOs = env::args_os(); 
 
 
     todo!(); 

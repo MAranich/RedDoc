@@ -10,7 +10,11 @@ use crate::{
     node::{State, Timeline},
 };
 
-pub fn process_report<P: AsRef<Path>>(_sub_match: &ArgMatches, _stdin: String, state: &mut State, path: P) {
+pub fn process_report<P: AsRef<Path>>(_sub_match: &ArgMatches, _stdin: &str, state: &mut State, path: P) {
+    /*
+        TODO: also store std input ? / or do something with it? 
+    */
+
     let contents: String = time_line_to_markdown(&state.time_line);
 
     match generate_file(path, contents.as_str()) {

@@ -56,7 +56,7 @@ impl ToString for Consequence {
 ///  - No subcommand was passed
 ///  - An unrecognized subcommand was passed.
 ///  - Due to other errors caused by the different subcommands.
-pub fn process_consequences(sub_match: &ArgMatches, stdin: String, state: &mut State) {
+pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
     if DEBUG_MODE {
         println!("Consequence detected! Processing...");
     }
@@ -83,7 +83,7 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: String, state: &mut S
     state.add_node(&new_node);
 }
 
-fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: String) -> Option<Node> {
+fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
     let contents: String = crate::action::handle_general_custom(raw_content, stdin);
 
     if contents.is_empty() {

@@ -92,15 +92,16 @@ fn main() {
        For this reason we will detect the use of the subcommand *command* and parse it manually.
     */
 
-    let raw_arguments: env::ArgsOs = env::args_os(); 
+    let raw_arguments: env::ArgsOs = env::args_os();
     // `stdin == ""` => Nothing was piped
-    let stdin: String = get_stdin(); 
+    let stdin_binding: String = get_stdin();
+    let stdin: &str = stdin_binding.as_str();
 
-    if let Some(sub_command) = raw_arguments.into_iter().skip(1).next() {
+    if let Some(sub_command) = raw_arguments.into_iter().nth(1) {
         let second_arg: String = sub_command.into_string().unwrap_or_default();
         let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg);
         if is_second_arg_command {
-            process_command();
+            process_command(stdin);
         }
     }
 
