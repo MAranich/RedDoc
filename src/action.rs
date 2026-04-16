@@ -1,4 +1,7 @@
-use std::env::{self, ArgsOs};
+use std::{
+    env::{self, ArgsOs},
+    process::{Command, Stdio},
+};
 
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
@@ -135,11 +138,67 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
     return content;
 }
 
+/// Processes the command and stores the adequate representation on the state.
+///
+/// # Panics
+///
+/// Panics if arguments contain invalid Uncode data.
 pub fn process_command(stdin: &str) {
+    /*
+       For this we need to:
+       1. Store the command execution action
+       2. Execute the command given in the args
+            - With the provided args and stdin
+       3. Store the result of the execution as a consequence.
+    */
 
-    let args: ArgsOs = env::args_os(); 
+    let raw_args: ArgsOs = env::args_os();
+    let args_opt: Option<String> = raw_args
+        .into_iter()
+        .skip(2)
+        .map(|x: std::ffi::OsString| {
+            x.into_string()
+                .expect("No error while unwrapping os string. ")
+        })
+        .reduce(|mut x: String, y: String| {
+            x.push(' ');
+            x.push_str(&y);
+            x
+        });
+    // args are all arguments afrer the *command* argument
 
+    if args_opt.is_none() {
+        eprintln!("No command passed. Aborting. ");
+        return;
+    }
 
-    todo!(); 
+    // "<args>"
+    let args: String = format!("\"{}\"", args_opt.expect("Just checked args is Some()"));
+    let stdio = todo!("Stdio::?");
+
+    let result: Result<std::process::Output, std::io::Error> = Command::new("sh")
+        .stdin(stdio)
+        .arg("-c")
+        .arg(args.as_str())
+        .output();
+
+    match result {
+        Ok(output) => {
+            // print the output in screes so user can see it
+            if output.status.success() {
+                let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                print!("{out_str}");
+            } else {
+                let e: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                eprintln!("There was an error with the command |{args}| . Error: \n{e}");
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "There was an IO error while executing command |sh -c {args}| . Error: \n{e}"
+            );
+        }
+    }
+
+    todo!();
 }
-
