@@ -1,5 +1,6 @@
 use std::{
-    env::{self, ArgsOs},
+    env::{self},
+    io::Write,
     process::{Command, Stdio},
 };
 
@@ -122,7 +123,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
             // add some space
             content_arg.push_str("\n\n");
 
-            content_arg.push_str(&stdin);
+            content_arg.push_str(stdin);
             content_arg
         }
         (true, false) => content_arg,
@@ -140,9 +141,20 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
 
 /// Processes the command and stores the adequate representation on the state.
 ///
+/// Quotes can be used so everything is treated as a single command: 
+/// `"ls -la | grep meow"`
+/// 
+/// # Known problems
+/// 
+///  - Programs that requiere a terminal will fail. 
+///      - Example: `nano`
+///  - Programs that execute forever will also not terminate nor record data. 
+///      - Example: `ping` (without `-c`)
+/// 
 /// # Panics
 ///
 /// Panics if arguments contain invalid Uncode data.
+/// 
 pub fn process_command(stdin: &str) {
     /*
        For this we need to:
@@ -152,35 +164,46 @@ pub fn process_command(stdin: &str) {
        3. Store the result of the execution as a consequence.
     */
 
-    let raw_args: ArgsOs = env::args_os();
-    let args_opt: Option<String> = raw_args
-        .into_iter()
+    // Get command as a single string
+    let args_vec: Vec<String> = env::args_os()
         .skip(2)
         .map(|x: std::ffi::OsString| {
             x.into_string()
-                .expect("No error while unwrapping os string. ")
-        })
-        .reduce(|mut x: String, y: String| {
-            x.push(' ');
-            x.push_str(&y);
-            x
-        });
+                .expect("Invalid UTF-8 in args. ")
+        }).collect();
     // args are all arguments afrer the *command* argument
 
-    if args_opt.is_none() {
+    if args_vec.is_empty() {
+        // early return
         eprintln!("No command passed. Aborting. ");
         return;
     }
 
-    // "<args>"
-    let args: String = format!("\"{}\"", args_opt.expect("Just checked args is Some()"));
-    let stdio = todo!("Stdio::?");
+    // Join arguments into a single string
+    let args: String = args_vec.join(" ");
 
-    let result: Result<std::process::Output, std::io::Error> = Command::new("sh")
-        .stdin(stdio)
-        .arg("-c")
-        .arg(args.as_str())
-        .output();
+    // get child handle
+    let mut child: std::process::Child = Command::new("sh")
+    .arg("-c")        
+    .arg(args.as_str())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Could not spawn process in `process_command`. ");
+
+    // Pass stdin
+    if let Some(mut stdin_handle) = child.stdin.take() {
+        let result: Result<(), std::io::Error> = stdin_handle.write_all(stdin.as_bytes()); 
+        if let Err(e) = result {
+            eprintln!("Failed to write to stdin in `process_command`. Was attempting to execute command |sh -c {args}| . Error: \n{e}"); 
+        }
+
+        drop(stdin_handle);
+    }
+
+    // Wait for process to exit and store output
+    let result: Result<std::process::Output, std::io::Error> = child.wait_with_output();
 
     match result {
         Ok(output) => {
@@ -189,16 +212,29 @@ pub fn process_command(stdin: &str) {
                 let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
                 print!("{out_str}");
             } else {
-                let e: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
-                eprintln!("There was an error with the command |{args}| . Error: \n{e}");
+                let e: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
+                let out: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                eprint!("There was an error with the command |{args}| . ");
+
+                let empty_e: bool = e.trim().is_empty(); 
+                let empty_out: bool = out.trim().is_empty(); 
+                if empty_e && empty_out {
+                    eprint!("Error: \n{e}\nOutput: \n{out}"); 
+                } else if empty_e {
+                    eprint!("Error: \n{e}"); 
+                } else {
+                    // empty_out
+                    eprint!("Output: \n{out}"); 
+                }
+                
             }
         }
         Err(e) => {
             eprintln!(
-                "There was an IO error while executing command |sh -c {args}| . Error: \n{e}"
+                "There was an IO error while executing command |sh -c {args}| . No data was stored. Error: \n{e}"
             );
         }
     }
 
-    todo!();
+    // todo!();
 }
