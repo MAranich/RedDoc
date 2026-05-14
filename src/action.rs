@@ -141,21 +141,22 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
 
 /// Processes the command and stores the adequate representation on the state.
 ///
-/// Quotes can be used so everything is treated as a single command: 
+/// Quotes can be used so everything is treated as a single command:
 /// `"ls -la | grep meow"`
-/// 
+///
 /// # Known problems
-/// 
-///  - Programs that requiere a terminal will fail. 
+///
+///  - Programs that requiere a terminal will fail.
 ///      - Example: `nano`
-///  - Programs that execute forever will also not terminate nor record data. 
+///  - Programs that execute forever will also not terminate nor record data.
 ///      - Example: `ping` (without `-c`)
-/// 
+///
 /// # Panics
 ///
 /// Panics if arguments contain invalid Uncode data.
-/// 
-pub fn process_command(stdin: &str) {
+///
+#[must_use]
+pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
     /*
        For this we need to:
        1. Store the command execution action
@@ -167,16 +168,14 @@ pub fn process_command(stdin: &str) {
     // Get command as a single string
     let args_vec: Vec<String> = env::args_os()
         .skip(2)
-        .map(|x: std::ffi::OsString| {
-            x.into_string()
-                .expect("Invalid UTF-8 in args. ")
-        }).collect();
+        .map(|x: std::ffi::OsString| x.into_string().expect("Invalid UTF-8 in args. "))
+        .collect();
     // args are all arguments afrer the *command* argument
 
     if args_vec.is_empty() {
         // early return
         eprintln!("No command passed. Aborting. ");
-        return;
+        return None;
     }
 
     // Join arguments into a single string
@@ -184,8 +183,8 @@ pub fn process_command(stdin: &str) {
 
     // get child handle
     let mut child: std::process::Child = Command::new("sh")
-    .arg("-c")        
-    .arg(args.as_str())
+        .arg("-c")
+        .arg(args.as_str())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -194,9 +193,11 @@ pub fn process_command(stdin: &str) {
 
     // Pass stdin
     if let Some(mut stdin_handle) = child.stdin.take() {
-        let result: Result<(), std::io::Error> = stdin_handle.write_all(stdin.as_bytes()); 
+        let result: Result<(), std::io::Error> = stdin_handle.write_all(stdin.as_bytes());
         if let Err(e) = result {
-            eprintln!("Failed to write to stdin in `process_command`. Was attempting to execute command |sh -c {args}| . Error: \n{e}"); 
+            eprintln!(
+                "Failed to write to stdin in `process_command`. Was attempting to execute command |sh -c {args}| . Error: \n{e}"
+            );
         }
 
         drop(stdin_handle);
@@ -205,29 +206,46 @@ pub fn process_command(stdin: &str) {
     // Wait for process to exit and store output
     let result: Result<std::process::Output, std::io::Error> = child.wait_with_output();
 
+    let mut ret: Option<(Node, Node)> = None;
+
     match result {
         Ok(output) => {
+            // Input command node
             // print the output in screes so user can see it
-            if output.status.success() {
+            let output_node: Node = if output.status.success() {
                 let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
                 print!("{out_str}");
+
+                Node::new(Category::Consequence(
+                    crate::consequences::Consequence::Command(out_str.to_string(), String::new()),
+                ))
             } else {
-                let e: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
-                let out: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                let err_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
+                let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
                 eprint!("There was an error with the command |{args}| . ");
 
-                let empty_e: bool = e.trim().is_empty(); 
-                let empty_out: bool = out.trim().is_empty(); 
-                if empty_e && empty_out {
-                    eprint!("Error: \n{e}\nOutput: \n{out}"); 
-                } else if empty_e {
-                    eprint!("Error: \n{e}"); 
+                let empty_err: bool = err_str.trim().is_empty();
+                let empty_out: bool = out_str.trim().is_empty();
+                if empty_err && empty_out {
+                    eprint!("Error: \n{err_str}\nOutput: \n{out_str}");
+                } else if empty_err {
+                    eprint!("Error: \n{err_str}");
                 } else {
                     // empty_out
-                    eprint!("Output: \n{out}"); 
+                    eprint!("Output: \n{out_str}");
                 }
-                
-            }
+
+                Node::new(Category::Consequence(
+                    crate::consequences::Consequence::Command(
+                        out_str.to_string(),
+                        err_str.to_string(),
+                    ),
+                ))
+            };
+
+            let input_node: Node = Node::new(Category::Action(Action::Command(args)));
+
+            ret = Some((input_node, output_node));
         }
         Err(e) => {
             eprintln!(
@@ -235,6 +253,8 @@ pub fn process_command(stdin: &str) {
             );
         }
     }
+
+    return ret;
 
     // todo!();
 }

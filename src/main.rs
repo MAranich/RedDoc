@@ -92,6 +92,13 @@ fn main() {
        For this reason we will detect the use of the subcommand *command* and parse it manually.
     */
 
+    let project_path: &Path = Path::new("./project.json");
+    let report_path: &Path = Path::new("./report.md");
+
+    let mut state: State = State::get_state(project_path);
+
+    // ////////////////
+
     let raw_arguments: env::ArgsOs = env::args_os();
     // `stdin == ""` => Nothing was piped
     let stdin_binding: String = get_stdin();
@@ -101,7 +108,17 @@ fn main() {
         let second_arg: String = sub_command.into_string().unwrap_or_default();
         let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg);
         if is_second_arg_command {
-            process_command(stdin);
+            let command_nodes: Option<(node::Node, node::Node)> = process_command(stdin);
+            if let Some((input_node, output_node)) = command_nodes {
+                state.add_node(&input_node);
+                state.add_node(&output_node);
+            }
+
+            let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
+            if let Err(e) = save_result {
+                eprintln!("There has been an error storing the state. Error: \n{e:?}");
+            }
+            return;
         }
     }
 
@@ -155,11 +172,6 @@ fn main() {
         .get_matches();
 
     // //////////
-
-    let project_path: &Path = Path::new("./project.json");
-    let report_path: &Path = Path::new("./report.md");
-
-    let mut state: State = State::get_state(project_path);
 
     match matches.subcommand() {
         Some((SUB_ACTION, sub_match)) => process_action(sub_match, stdin, &mut state),

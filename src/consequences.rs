@@ -10,8 +10,8 @@ use crate::{
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Consequence {
     Custom(String),
-    /// Output of a command
-    Command(String),
+    /// Output of a command and stderr
+    Command(String, String),
     NewInformation(InfoRef),
     /// The Blue team (Defenders) have discovered the activity.
     Detection,
