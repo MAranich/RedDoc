@@ -3,12 +3,18 @@
 //! for storing the information.
 //!
 
-use crate::{action::Action, consequences::Consequence, event::Event, information::Information};
+use crate::{
+    action::Action,
+    consequences::Consequence,
+    event::Event,
+    information::{Computer, InfoClass, Information, Software, User, Vulnerability},
+};
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::read,
     io::{self, ErrorKind, Write},
+    net::IpAddr,
     path::Path,
 };
 
@@ -150,6 +156,90 @@ impl State {
 
     pub fn add_node(&mut self, node: &Node) {
         self.time_line.0.push(node.clone());
+    }
+
+    pub fn add_computer(&mut self, computer: Computer) -> Option<usize> {
+        let duplicated: bool = self
+            .information
+            .computers
+            .iter()
+            .any(|c: &Computer| c.name == computer.name);
+
+        if duplicated {
+            return None;
+        }
+
+        self.information.computers.push(computer);
+        return Some(self.information.computers.len() - 1);
+    }
+
+    pub fn add_ip(&mut self, ip: IpAddr) -> Option<usize> {
+        let duplicated: bool = self
+            .information
+            .ips
+            .iter()
+            .any(|other: &IpAddr| ip.eq(other));
+
+        if duplicated {
+            return None;
+        }
+        self.information.ips.push(ip);
+        return Some(self.information.ips.len() - 1);
+    }
+
+    pub fn add_software(&mut self, software: Software) -> Option<usize> {
+        let duplicated: bool = self
+            .information
+            .software
+            .iter()
+            .any(|other: &Software| software.name.eq(&other.name));
+
+        if duplicated {
+            return None;
+        }
+
+        self.information.software.push(software);
+        return Some(self.information.software.len() - 1);
+    }
+
+    pub fn add_vulnerability(&mut self, vulnerability: Vulnerability) -> Option<usize> {
+
+        let duplicated: bool = self
+            .information
+            .vulnerabilities
+            .iter()
+            .any(|other: &Vulnerability| vulnerability.cve.eq(&other.cve));
+
+        if duplicated {
+            return None;
+        }
+
+        self.information.vulnerabilities.push(vulnerability);
+        return Some(self.information.vulnerabilities.len() - 1);
+    }
+
+    pub fn add_domain(&mut self, domain: String) -> Option<usize> {
+        let duplicated: bool = self
+            .information
+            .domains
+            .iter()
+            .any(|other: &String| domain.eq(other));
+
+        if duplicated {
+            return None;
+        }
+        self.information.domains.push(domain);
+        return Some(self.information.domains.len() - 1);
+    }
+
+    pub fn add_user(&mut self, user: User) -> Option<usize> {
+        self.information.users.push(user);
+        return Some(self.information.users.len() - 1);
+    }
+
+    pub fn add_fact(&mut self, fact: String) -> Option<usize> {
+        self.information.facts.push(fact);
+        return Some(self.information.facts.len() - 1);
     }
 }
 
