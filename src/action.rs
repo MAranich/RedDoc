@@ -87,7 +87,7 @@ pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
 }
 
 fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
-    let contents: String = handle_general_custom(raw_content, stdin);
+    let contents: String = get_content(raw_content, stdin);
 
     if contents.is_empty() {
         None
@@ -100,7 +100,7 @@ fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Nod
 ///
 /// Used in both Action, Consequence and Event
 #[must_use]
-pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
+pub fn get_content(raw_content: &ArgMatches, stdin: &str) -> String {
     // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
     /*
        We need to check if we got the values from the argument or stdin and handle each case:
@@ -146,7 +146,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
 ///
 /// # Known problems
 ///
-///  - Programs that requiere a terminal will fail.
+///  - Programs that requiere a terminal will fail (interactive commands).
 ///      - Example: `nano`
 ///  - Programs that execute forever will also not terminate nor record data.
 ///      - Example: `ping` (without `-c`)
@@ -158,11 +158,16 @@ pub fn handle_general_custom(raw_content: &ArgMatches, stdin: &str) -> String {
 #[must_use]
 pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
     /*
-       For this we need to:
-       1. Store the command execution action
-       2. Execute the command given in the args
-            - With the provided args and stdin
-       3. Store the result of the execution as a consequence.
+        For this we need to:
+        1. Store the command execution action
+        2. Execute the command given in the args
+                - With the provided args and stdin
+        3. Store the result of the execution as a consequence.
+
+        Possible improvements for this function: 
+        - a version that avoids the shell entirely  
+        - a version that supports interactive commands  
+        - a version that streams output live instead of waiting
     */
 
     // Get command as a single string

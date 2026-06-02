@@ -77,7 +77,7 @@ pub fn process_event(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
 }
 
 fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
-    let contents: String = crate::action::handle_general_custom(raw_content, stdin);
+    let contents: String = crate::action::get_content(raw_content, stdin);
 
     if contents.is_empty() {
         None

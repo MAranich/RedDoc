@@ -58,6 +58,18 @@ const CONSEQUENCE_CUSTOM_ABOUT: &str =
 This option can be used to store: 
  - Comments
  - Scenatios not accounted in the program. ";
+const CONSEQUENCE_INFO_COMPUTER: &str = "computer";
+const CONSEQUENCE_INFO_IP: &str = "ip";
+const CONSEQUENCE_INFO_PORT: &str = "port";
+const CONSEQUENCE_INFO_DOMAIN: &str = "domain";
+const CONSEQUENCE_INFO_SERVICE: &str = "service";
+const CONSEQUENCE_INFO_SOFTWARE: &str = "software";
+const CONSEQUENCE_INFO_VULNERABILITY: &str = "vulnerability";
+const CONSEQUENCE_INFO_FIREWALL: &str = "firewall";
+const CONSEQUENCE_INFO_FILE: &str = "file";
+const CONSEQUENCE_INFO_HONEYPOT: &str = "honeypot";
+const CONSEQUENCE_INFO_VIRTUAL_MACHINE: &str = "virtual_machine";
+const CONSEQUENCE_INFO_CREDENTIALS: &str = "credentials";
 
 // Sub commands for events: **********************************************
 const EVENT_CUSTOM: &str = "custom";
@@ -81,6 +93,7 @@ pub mod report;
 
 const DEBUG_MODE: bool = true;
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     /*
        The subcommand *command* needs to be parsed differently to the resto of
@@ -140,8 +153,21 @@ fn main() {
                 .alias("cons")
                 .subcommand(
                     Command::new(CONSEQUENCE_CUSTOM)
-                        .arg(Arg::new("content"))
+                        .arg(Arg::new("content").required(true))
                         .about(CONSEQUENCE_CUSTOM_ABOUT),
+                    ).subcommand(
+                        Command::new(CONSEQUENCE_INFO_COMPUTER)
+                        .arg(Arg::new("name"))
+                        .arg(Arg::new("ip").help("An ipv4 or ipv6 ip adress. Can be used multiple times. "))
+                        .arg(Arg::new("port").help("An open port. Can be used multiple times. "))
+                        .arg(Arg::new("os").alias("operating_system").help("The name of the operating system. Must be previusly declared as software. "))
+                        .about("Intregrate the existance of a new computer into the model. \nThis is stating that a given computer exists. The argument is a name/tag you give to it. `red_doc cons computer objectie_42`"),
+                )
+                .subcommand(
+                    Command::new(CONSEQUENCE_INFO_IP)
+                        .arg(Arg::new("ip_dir").action(ArgAction::Append).required(true))
+                        .arg(Arg::new("computer").required(true))
+                        .about("Relate the provided IP to a computer. "),
                 ),
         )
         .subcommand(

@@ -1,1 +1,112 @@
-{"time_line":[{"time_stamp":"2026-04-13T15:45:56.583250138Z","category":{"Action":{"Custom":"fiew"}}},{"time_stamp":"2026-05-14T09:55:17.362053201Z","category":{"Action":{"Command":"ping 8.8.8.8 -c 8"}}},{"time_stamp":"2026-05-14T09:55:17.362043564Z","category":{"Consequence":{"Command":["PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.\n64 bytes from 8.8.8.8: icmp_seq=1 ttl=118 time=22.7 ms\n64 bytes from 8.8.8.8: icmp_seq=2 ttl=118 time=24.0 ms\n64 bytes from 8.8.8.8: icmp_seq=3 ttl=118 time=21.1 ms\n64 bytes from 8.8.8.8: icmp_seq=4 ttl=118 time=22.4 ms\n64 bytes from 8.8.8.8: icmp_seq=5 ttl=118 time=21.1 ms\n64 bytes from 8.8.8.8: icmp_seq=6 ttl=118 time=20.6 ms\n64 bytes from 8.8.8.8: icmp_seq=7 ttl=118 time=68.9 ms\n64 bytes from 8.8.8.8: icmp_seq=8 ttl=118 time=31.5 ms\n\n--- 8.8.8.8 ping statistics ---\n8 packets transmitted, 8 received, 0% packet loss, time 7011ms\nrtt min/avg/max/mdev = 20.573/29.031/68.917/15.431 ms\n",""]}}}],"information":{"computers":[],"ips":[],"software":[],"vulnerabilities":[],"domains":[],"users":[],"facts":[]}}
+{
+    "time_line": [
+        {
+            "time_stamp": "2026-04-13T15:45:56.583250138Z",
+            "category": {
+                "Action": {
+                    "Custom": "fiew"
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-05-14T09:55:17.362053201Z",
+            "category": {
+                "Action": {
+                    "Command": "ping 8.8.8.8 -c 8"
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-05-14T09:55:17.362043564Z",
+            "category": {
+                "Consequence": {
+                    "Command": [
+                        "PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.\n64 bytes from 8.8.8.8: icmp_seq=1 ttl=118 time=22.7 ms\n64 bytes from 8.8.8.8: icmp_seq=2 ttl=118 time=24.0 ms\n64 bytes from 8.8.8.8: icmp_seq=3 ttl=118 time=21.1 ms\n64 bytes from 8.8.8.8: icmp_seq=4 ttl=118 time=22.4 ms\n64 bytes from 8.8.8.8: icmp_seq=5 ttl=118 time=21.1 ms\n64 bytes from 8.8.8.8: icmp_seq=6 ttl=118 time=20.6 ms\n64 bytes from 8.8.8.8: icmp_seq=7 ttl=118 time=68.9 ms\n64 bytes from 8.8.8.8: icmp_seq=8 ttl=118 time=31.5 ms\n\n--- 8.8.8.8 ping statistics ---\n8 packets transmitted, 8 received, 0% packet loss, time 7011ms\nrtt min/avg/max/mdev = 20.573/29.031/68.917/15.431 ms\n",
+                        ""
+                    ]
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-01T10:30:03.171723168Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "Computer"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-01T10:34:49.687625396Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "IP"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-01T11:15:27.350571866Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "IP"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-01T11:15:56.151091816Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "IP"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-01T11:15:56.151102673Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 1,
+                        "class": "IP"
+                    }
+                }
+            }
+        }
+    ],
+    "information": {
+        "computers": [
+            {
+                "name": "pikachu",
+                "ips": [],
+                "ports": [],
+                "services": [],
+                "is_honeypot": false,
+                "is_virtualized": [
+                    false,
+                    null
+                ],
+                "infection_level": "None",
+                "operating_system": null
+            }
+        ],
+        "ips": [
+            "100.100.100.100",
+            "200.200.200.200"
+        ],
+        "software": [],
+        "vulnerabilities": [],
+        "domains": [],
+        "users": [],
+        "facts": []
+    }
+}

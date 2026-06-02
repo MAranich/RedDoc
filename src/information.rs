@@ -4,12 +4,13 @@
 //!
 
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
 
 /// Information that has been obtained
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Information {
     pub computers: Vec<Computer>,
-    pub ips: Vec<IP>,
+    pub ips: Vec<IpAddr>,
     pub software: Vec<Software>,
     pub vulnerabilities: Vec<Vulnerability>,
     pub domains: Vec<String>,
@@ -32,18 +33,20 @@ pub enum InfoClass {
 /// Reference to a particular element inside an [Information] struct.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InfoRef {
-    index: usize,
-    class: InfoClass,
+    pub index: usize,
+    pub class: InfoClass,
 }
 
 /// Information of a computer.
 ///
-/// It does not need to be linked to physical hardware (it may be virtualized).
+/// May also be refered as "machine" in the documantation. It does not need
+/// to be linked to physical hardware (it may be virtualized).
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Computer {
     /// A name to quicky identify the computer
     pub name: String,
-    pub ips: Vec<IP>,
+    /// List of indexes to IP directions asociated to this machine
+    pub ips: Vec<usize>,
     /// List of open / relevant ports
     pub ports: Vec<u16>,
     /// Valid Indices to the [Information] stuct (software column)
@@ -55,7 +58,7 @@ pub struct Computer {
     /// (false, Some(...)) is invalid
     /// Valid Indices to the [Information] stuct (software column)
     pub is_virtualized: (bool, Option<usize>),
-    /// Represents the highest level of control ever achieved.
+    /// Represents the highest level of control ever achieved. User defined.
     pub infection_level: ComputerControl,
     /// Valid Indices to the [Information] stuct (software column)
     pub operating_system: Option<usize>,
@@ -71,12 +74,6 @@ pub enum ComputerControl {
     Limited,
     /// No control
     None,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum IP {
-    V4(u32),
-    V6(u64),
 }
 
 /// Some software used somewhere
@@ -139,20 +136,18 @@ impl Information {
     }
 }
 
-impl PartialOrd for IP {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        return Some(self.cmp(other));
-    }
-}
-
-impl Ord for IP {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let ret: std::cmp::Ordering = match (self, other) {
-            (Self::V4(x), Self::V4(y)) => x.cmp(y),
-            (Self::V6(x), Self::V6(y)) => x.cmp(y),
-            (Self::V4(x), Self::V6(y)) => u64::from(*x).cmp(y),
-            (Self::V6(x), Self::V4(y)) => x.cmp(&u64::from(*y)),
+impl Computer {
+    #[must_use]
+    pub const fn new(name_: String) -> Self {
+        return Self {
+            name: name_,
+            ips: Vec::new(),
+            ports: Vec::new(),
+            services: Vec::new(),
+            is_honeypot: false,
+            is_virtualized: (false, None),
+            infection_level: ComputerControl::None,
+            operating_system: None,
         };
-        return ret;
     }
 }

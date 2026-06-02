@@ -71,7 +71,16 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
 
     if let Some((CONSEQUENCE_INFO_IP, raw_content)) = subcommand {
         // Needs special handling because it supports multiple ips at once.
-        let new_nodes = handle_subcommand_ip(state, raw_content);
+        let new_nodes: Vec<Node> = handle_subcommand_ip(state, raw_content);
+
+        for (i, node) in new_nodes.iter().enumerate() {
+            if DEBUG_MODE {
+                println!("New node {i}: \n{node:?}");
+            }
+
+            state.add_node(node);
+        }
+
         return;
     }
 
@@ -90,7 +99,7 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
         Some((CONSEQUENCE_INFO_HONEYPOT, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_VIRTUAL_MACHINE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_CREDENTIALS, _raw_content)) => todo!(),
-        Some((CONSEQUENCE_INFO_IP, raw_content)) => unreachable!("Case already handled. "),
+        Some((CONSEQUENCE_INFO_IP, _raw_content)) => unreachable!("Case already handled. "),
         Some(_) => panic!("Unrecognized action subcommand provided"),
         None => panic!("No action subcommand provided. "),
     };
@@ -124,33 +133,29 @@ fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Nod
 }
 
 fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Option<Node> {
+    // TODO: add services flag
+
     let arg_name: &String = raw_content.get_one::<String>("name")?;
 
-    let arg_ip: Vec<IpAddr> = raw_content
-        .get_many::<String>("ip")
-        .unwrap_or_default()
-        .flat_map(|ip| ip.as_str().parse::<IpAddr>())
-        .collect::<Vec<IpAddr>>();
+    let mut new_computer: Computer = Computer::new(arg_name.clone());
 
     let arg_port: Vec<u16> = raw_content
         .get_many::<String>("port")
         .unwrap_or_default()
-        .flat_map(|port| port.parse::<u16>())
+        .filter_map(|port: &String| port.parse::<u16>().ok())
         .collect::<Vec<u16>>();
 
-    // TODO: add services flag
-    let new_computer: Computer = Computer {
-        name: arg_name.clone(),
-        ips: arg_ip,
-        ports: arg_port,
-        services: Vec::new(),
-        is_honeypot: false,
-        is_virtualized: (false, None),
-        infection_level: crate::information::ComputerControl::None,
-        operating_system: None,
-    };
+    new_computer.ports = arg_port;
 
     let id: usize = state.add_computer(new_computer)?;
+
+    raw_content
+        .get_many::<String>("ip")
+        .unwrap_or_default()
+        .filter_map(|ip: &String| ip.as_str().parse::<IpAddr>().ok())
+        .for_each(|ip: IpAddr| {
+            let _ = state.add_ip(ip, id);
+        });
 
     Some(Node::new(Category::Consequence(
         Consequence::NewInformation(InfoRef {
@@ -161,24 +166,41 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Op
 }
 
 fn handle_subcommand_ip(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {
+    // get the id of the computer passed as argument or return empty vec + err message
+    let computer_id: usize = {
+        let computer_tag_opt: Option<&String> = raw_content.get_one::<String>("computer");
+        let computer_tag: &String = match computer_tag_opt {
+            Some(v) => v,
+            None => return Vec::new(),
+        };
+
+        let computer_id_opt: Option<usize> = state
+            .information
+            .computers
+            .iter()
+            .position(|c: &Computer| c.name.eq(computer_tag));
+
+        match computer_id_opt {
+            Some(v) => v,
+            None => return Vec::new(),
+        }
+    };
+
     let ret: Vec<Node> = raw_content
-        .get_many::<String>("ip")
+        .get_many::<String>("ip_dir")
         .unwrap_or_default()
-        .flat_map(|ip: &String| ip.as_str().parse::<IpAddr>())
-        .flat_map(|ip: IpAddr| {
-            let id_opt: Option<usize> = state.add_ip(ip);
-            if let Some(id) = id_opt {
-                let new_node: Node = Node::new(Category::Consequence(Consequence::NewInformation(
+        .filter_map(|ip: &String| ip.as_str().parse::<IpAddr>().ok())
+        .filter_map(|ip: IpAddr| {
+            let id_opt: Option<usize> = state.add_ip(ip, computer_id);
+            // None = ignore duplicated ips
+            id_opt.map(|id: usize| {
+                Node::new(Category::Consequence(Consequence::NewInformation(
                     InfoRef {
                         index: id,
                         class: crate::information::InfoClass::IP,
                     },
-                )));
-                Some(new_node)
-            } else {
-                // ignore duplicated ips
-                None
-            }
+                )))
+            })
         })
         .collect::<Vec<Node>>();
 

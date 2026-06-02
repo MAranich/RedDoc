@@ -7,7 +7,7 @@ use crate::{
     action::Action,
     consequences::Consequence,
     event::Event,
-    information::{Computer, InfoClass, Information, Software, User, Vulnerability},
+    information::{Computer, Information, Software, User, Vulnerability},
 };
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -158,6 +158,7 @@ impl State {
         self.time_line.0.push(node.clone());
     }
 
+    /// Adds an [`Computer`] to the [`State`]. Returns [None] if it already exists.  
     pub fn add_computer(&mut self, computer: Computer) -> Option<usize> {
         let duplicated: bool = self
             .information
@@ -173,7 +174,12 @@ impl State {
         return Some(self.information.computers.len() - 1);
     }
 
-    pub fn add_ip(&mut self, ip: IpAddr) -> Option<usize> {
+    /// Adds an [`IpAddr`] to the [`State`] and relates it to the [`Computer`].
+    ///
+    /// Returns [None] if:  
+    ///  - The ip already exists.
+    ///  - The computer does not exist
+    pub fn add_ip(&mut self, ip: IpAddr, id_computer: usize) -> Option<usize> {
         let duplicated: bool = self
             .information
             .ips
@@ -183,10 +189,23 @@ impl State {
         if duplicated {
             return None;
         }
+
+        let computer: &mut Computer = self.information.computers.get_mut(id_computer)?;
+        
+        let id_ip: usize = self.information.ips.len();
+        
         self.information.ips.push(ip);
-        return Some(self.information.ips.len() - 1);
+        computer.ips.push(id_ip);
+
+        println!(
+            "Ip {} (id: {}) is now asociated to Computer {} (id: {}). ",
+            ip, id_ip, computer.name, id_computer
+        );
+
+        return Some(id_ip);
     }
 
+    /// Adds [Software] to the [`State`]. Returns [None] if it already exists.  
     pub fn add_software(&mut self, software: Software) -> Option<usize> {
         let duplicated: bool = self
             .information
@@ -202,8 +221,8 @@ impl State {
         return Some(self.information.software.len() - 1);
     }
 
+    /// Adds a [Vulnerability] to the [`State`]. Returns [None] if it already exists.  
     pub fn add_vulnerability(&mut self, vulnerability: Vulnerability) -> Option<usize> {
-
         let duplicated: bool = self
             .information
             .vulnerabilities
@@ -218,6 +237,7 @@ impl State {
         return Some(self.information.vulnerabilities.len() - 1);
     }
 
+    /// Adds a Domain to the [`State`]. Returns [None] if it already exists.  
     pub fn add_domain(&mut self, domain: String) -> Option<usize> {
         let duplicated: bool = self
             .information
@@ -232,14 +252,68 @@ impl State {
         return Some(self.information.domains.len() - 1);
     }
 
+    /// Adds an [`User`] to the [`State`]. Returns [None] if it already exists.  
     pub fn add_user(&mut self, user: User) -> Option<usize> {
         self.information.users.push(user);
         return Some(self.information.users.len() - 1);
     }
 
+    /// Adds a fact to the [State]. Returns [None] if it already exists.  
     pub fn add_fact(&mut self, fact: String) -> Option<usize> {
         self.information.facts.push(fact);
         return Some(self.information.facts.len() - 1);
+    }
+
+    #[must_use]
+    pub fn get_computer_id(&self, name: &str) -> Option<usize> {
+        self.information
+            .computers
+            .iter()
+            .position(|c: &Computer| c.name == name)
+    }
+
+    /// Relates an [`IpAddr`] to a [`Computer`].
+    ///
+    /// If the ip is already related to the computer, an error message
+    /// is emited and no other actions are taken.
+    ///
+    /// # Panics
+    ///
+    /// Both the ip adress and the computer must already exists in the
+    /// [`Information`] struct. If this is false, the function will panic as
+    /// this signals an inconsintent state in the program.
+    ///
+    pub fn relate_ip_computer(&mut self, id_computer: usize, id_ip: usize) {
+        assert!(
+            self.information.ips.get(id_ip).is_some(),
+            "id of ip adress does not exist"
+        );
+
+        let ip: &IpAddr = self.information.ips.get(id_ip).unwrap_or_else(|| panic!("id of ip adress does not exist"));
+
+        // id are valid
+
+        let computer_opt: Option<&mut Computer> = self.information.computers.get_mut(id_computer);
+        match computer_opt {
+            None => panic!("id of computer does not exist"),
+            Some(computer) => {
+                if computer.ips.contains(&id_ip) {
+                    // duplicated
+                    eprintln!(
+                        "Computer {} (id: {}) already is asociated to ip {} (id: {}). \n\nAborting. No actions have been taken. ",
+                        computer.name, id_computer, ip, id_ip
+                    );
+                    return;
+                }
+                // not duplicated
+                computer.ips.push(id_ip);
+
+                println!(
+                    "Ip {} (id: {}) is now asociated to Computer {} (id: {}). ",
+                    ip, id_ip, computer.name, id_computer
+                ); 
+            }
+        }
     }
 }
 
