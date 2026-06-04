@@ -4,11 +4,21 @@ use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CONSEQUENCE_CUSTOM, CONSEQUENCE_INFO_COMPUTER, CONSEQUENCE_INFO_CREDENTIALS,
-    CONSEQUENCE_INFO_DOMAIN, CONSEQUENCE_INFO_FILE, CONSEQUENCE_INFO_FIREWALL,
-    CONSEQUENCE_INFO_HONEYPOT, CONSEQUENCE_INFO_IP, CONSEQUENCE_INFO_PORT,
-    CONSEQUENCE_INFO_SERVICE, CONSEQUENCE_INFO_SOFTWARE, CONSEQUENCE_INFO_VIRTUAL_MACHINE,
-    CONSEQUENCE_INFO_VULNERABILITY, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
+    CONSEQUENCE_CUSTOM,
+    CONSEQUENCE_INFO_COMPUTER,
+    CONSEQUENCE_INFO_CREDENTIALS,
+    CONSEQUENCE_INFO_DOMAIN,
+    CONSEQUENCE_INFO_FILE,
+    CONSEQUENCE_INFO_FIREWALL,
+    CONSEQUENCE_INFO_HONEYPOT,
+    CONSEQUENCE_INFO_IP,
+    // CONSEQUENCE_INFO_PORT,
+    CONSEQUENCE_INFO_SERVICE,
+    CONSEQUENCE_INFO_SOFTWARE,
+    CONSEQUENCE_INFO_VIRTUAL_MACHINE,
+    CONSEQUENCE_INFO_VULNERABILITY,
+    DEBUG_MODE,
+    MAX_CHARS_CUSTOM_REPORT,
     information::{Computer, InfoRef},
     node::{Category, Node, State},
 };
@@ -67,31 +77,15 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
         println!("Consequence detected! Processing...");
     }
 
-    let subcommand = sub_match.subcommand();
-
-    if let Some((CONSEQUENCE_INFO_IP, raw_content)) = subcommand {
-        // Needs special handling because it supports multiple ips at once.
-        let new_nodes: Vec<Node> = handle_subcommand_ip(state, raw_content);
-
-        for (i, node) in new_nodes.iter().enumerate() {
-            if DEBUG_MODE {
-                println!("New node {i}: \n{node:?}");
-            }
-
-            state.add_node(node);
-        }
-
-        return;
-    }
-
-    let new_node: Option<Node> = match subcommand {
+    let new_nodes: Vec<Node> = match sub_match.subcommand() {
         Some((CONSEQUENCE_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content, stdin),
+        Some((CONSEQUENCE_INFO_IP, raw_content)) => handle_subcommand_ip(state, raw_content),
         Some((CONSEQUENCE_INFO_COMPUTER, raw_content)) => {
             handle_subcommand_computer(state, raw_content)
         }
-        Some((CONSEQUENCE_INFO_PORT, _raw_content)) => todo!(),
-        Some((CONSEQUENCE_INFO_DOMAIN, _raw_content)) => todo!(),
+        //Some((CONSEQUENCE_INFO_PORT, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_SERVICE, _raw_content)) => todo!(),
+        Some((CONSEQUENCE_INFO_DOMAIN, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_SOFTWARE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_VULNERABILITY, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_FIREWALL, _raw_content)) => todo!(),
@@ -99,43 +93,54 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
         Some((CONSEQUENCE_INFO_HONEYPOT, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_VIRTUAL_MACHINE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_CREDENTIALS, _raw_content)) => todo!(),
-        Some((CONSEQUENCE_INFO_IP, _raw_content)) => unreachable!("Case already handled. "),
         Some(_) => panic!("Unrecognized action subcommand provided"),
         None => panic!("No action subcommand provided. "),
     };
 
-    if new_node.is_none() {
+    if new_nodes.is_empty() {
         if DEBUG_MODE {
             println!("No node has been created. ");
         }
         return;
     }
 
-    let new_node: Node = new_node.expect("To contain the Some variant. ");
+    for (i, node) in new_nodes.iter().enumerate() {
+        if DEBUG_MODE {
+            println!("New node {i}: \n{node:?}");
+        }
 
-    if DEBUG_MODE {
-        println!("New node: \n{new_node:?}");
+        state.add_node(node);
     }
-
-    state.add_node(&new_node);
 }
 
-fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
+fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Vec<Node> {
     let contents: String = crate::action::get_content(raw_content, stdin);
 
     if contents.is_empty() {
-        None
+        Vec::new()
     } else {
-        Some(Node::new(Category::Consequence(Consequence::Custom(
+        vec![Node::new(Category::Consequence(Consequence::Custom(
             contents,
-        ))))
+        )))]
     }
 }
 
-fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Option<Node> {
+fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {
     // TODO: add services flag
+    /*
+       1. Get name
+       2. Crete computer
+       3. Fill found ports
+       4. Add computer to state to obtain id
+       5. Add all ips to state
+       6. (Unimplemented) Add services
+       7. return node new computer
+    */
 
-    let arg_name: &String = raw_content.get_one::<String>("name")?;
+    let arg_name: &String = match raw_content.get_one::<String>("name") {
+        Some(v) => v,
+        None => return Vec::new(),
+    };
 
     let mut new_computer: Computer = Computer::new(arg_name.clone());
 
@@ -147,7 +152,10 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Op
 
     new_computer.ports = arg_port;
 
-    let id: usize = state.add_computer(new_computer)?;
+    let id: usize = match state.add_computer(new_computer) {
+        Some(v) => v,
+        None => return Vec::new(),
+    };
 
     raw_content
         .get_many::<String>("ip")
@@ -157,12 +165,12 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Op
             let _ = state.add_ip(ip, id);
         });
 
-    Some(Node::new(Category::Consequence(
+    return vec![Node::new(Category::Consequence(
         Consequence::NewInformation(InfoRef {
             index: id,
             class: crate::information::InfoClass::Computer,
         }),
-    )))
+    ))];
 }
 
 fn handle_subcommand_ip(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {

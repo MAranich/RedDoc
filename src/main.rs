@@ -60,7 +60,7 @@ This option can be used to store:
  - Scenatios not accounted in the program. ";
 const CONSEQUENCE_INFO_COMPUTER: &str = "computer";
 const CONSEQUENCE_INFO_IP: &str = "ip";
-const CONSEQUENCE_INFO_PORT: &str = "port";
+// const CONSEQUENCE_INFO_PORT: &str = "port";
 const CONSEQUENCE_INFO_DOMAIN: &str = "domain";
 const CONSEQUENCE_INFO_SERVICE: &str = "service";
 const CONSEQUENCE_INFO_SOFTWARE: &str = "software";
@@ -168,7 +168,13 @@ fn main() {
                         .arg(Arg::new("ip_dir").action(ArgAction::Append).required(true))
                         .arg(Arg::new("computer").required(true))
                         .about("Relate the provided IP to a computer. "),
-                ),
+                )
+                /* 
+                .subcommand(Command::new(CONSEQUENCE_INFO_PORT)
+                    .arg(Arg::new("ports").action(ArgAction::Append).required(true))
+                    .arg(Arg::new("computer").required(true))
+                    .about("Define wich ports are open for a certain computer. "),),
+                */
         )
         .subcommand(
             Command::new(SUB_EVENT)
