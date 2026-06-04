@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
+use crate::standardize_name;
+
 /// Information that has been obtained
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Information {
@@ -138,9 +140,12 @@ impl Information {
 
 impl Computer {
     #[must_use]
-    pub const fn new(name_: String) -> Self {
+    pub fn new(name_: &str) -> Self {
+
+        let curated_name: String = standardize_name(name_); 
+
         return Self {
-            name: name_,
+            name: curated_name,
             ips: Vec::new(),
             ports: Vec::new(),
             services: Vec::new(),

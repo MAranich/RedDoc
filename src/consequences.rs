@@ -137,12 +137,10 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
        7. return node new computer
     */
 
-    let arg_name: &String = match raw_content.get_one::<String>("name") {
-        Some(v) => v,
+    let mut new_computer: Computer = match raw_content.get_one::<String>("name") {
+        Some(arg_name) => Computer::new(arg_name.as_str()),
         None => return Vec::new(),
     };
-
-    let mut new_computer: Computer = Computer::new(arg_name.clone());
 
     let arg_port: Vec<u16> = raw_content
         .get_many::<String>("port")

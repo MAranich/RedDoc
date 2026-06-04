@@ -81,6 +81,10 @@ This option can be used to store:
  - Scenatios not accounted in the program. ";
 
 const MAX_CHARS_CUSTOM_REPORT: usize = 64;
+const CONF_NAME_ALLOW_NON_ASCII: bool = false;
+const CONF_NAME_CAST_TO_LOWERCASE: bool = true;
+/// 0 = no limit
+const CONF_NAME_MAX_LENGTH: usize = 0; 
 
 pub mod action;
 pub mod consequences;
@@ -265,6 +269,37 @@ pub fn get_stdin() -> String {
             ret.trim()
         );
     }
+
+    return ret;
+}
+
+#[must_use]
+pub fn standardize_name(name: &str) -> String {
+    /*
+       Operations:
+       1. Trim (remove whitespace at start and end)
+       2. Discard non-ascii
+       3. Discard control characters
+       4. Limit max amount of characters
+       5. Map all characters to lowercase (if aplicable)
+    */
+    let op_1: std::str::Chars<'_> = name.trim().chars();
+
+    let op_2 = op_1.filter(|c: &char| c.is_ascii() || CONF_NAME_ALLOW_NON_ASCII);
+
+    let op_3 = op_2.filter(|c: &char| !c.is_control()); 
+
+    let op_4: String = if CONF_NAME_MAX_LENGTH == 0 {
+        op_3.collect::<String>()
+    } else {
+        op_3.take(CONF_NAME_MAX_LENGTH).collect::<String>()
+    }; 
+    
+    let ret: String = if CONF_NAME_CAST_TO_LOWERCASE {
+        op_4.to_lowercase()
+    } else {
+        op_4
+    };
 
     return ret;
 }
