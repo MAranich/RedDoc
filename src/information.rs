@@ -83,7 +83,7 @@ pub enum ComputerControl {
 pub struct Software {
     pub name: String,
     pub description: String,
-    pub version: String,
+    pub version: Option<String>,
     /// Valid Indices to the [Information] stuct (Vulnerability column)
     pub vulnerabilities: Vec<usize>,
 }
@@ -122,6 +122,38 @@ pub enum Credential {
     PrivateKey(String),
 }
 
+impl Computer {
+    #[must_use]
+    pub fn new(name_: &str) -> Self {
+        let curated_name: String = standardize_name(name_);
+
+        return Self {
+            name: curated_name,
+            ips: Vec::new(),
+            ports: Vec::new(),
+            services: Vec::new(),
+            is_honeypot: false,
+            is_virtualized: (false, None),
+            infection_level: ComputerControl::None,
+            operating_system: None,
+        };
+    }
+}
+
+impl Software {
+    #[must_use]
+    pub fn new(name_: &str, description_: &str, version_: Option<String>) -> Self {
+        let curated_name: String = standardize_name(name_);
+
+        Self {
+            name: curated_name,
+            description: description_.to_string(),
+            version: version_,
+            vulnerabilities: Vec::new(),
+        }
+    }
+}
+
 impl Information {
     /// Creates empty Information struct
     #[must_use]
@@ -136,23 +168,33 @@ impl Information {
             facts: Vec::new(),
         };
     }
-}
 
-impl Computer {
     #[must_use]
-    pub fn new(name_: &str) -> Self {
+    pub fn get_sowtware_versions(&self, name: &str) -> Vec<&str> {
+        let curated_name: String = standardize_name(name);
 
-        let curated_name: String = standardize_name(name_); 
+        /*
+        // imperative version of the code
+        let mut ret: Vec<&str> = Vec::new();
+        for software in self.software.iter() {
+            if software.name != curated_name {
+                continue;
+            }
+            match &software.version {
+                Some(version) => {
+                    ret.push(version.as_str());
+                },
+                None => {},
+            }
+        }
+        return ret;
+        */
 
-        return Self {
-            name: curated_name,
-            ips: Vec::new(),
-            ports: Vec::new(),
-            services: Vec::new(),
-            is_honeypot: false,
-            is_virtualized: (false, None),
-            infection_level: ComputerControl::None,
-            operating_system: None,
-        };
+        self.software
+            .iter()
+            .filter(|software: &&Software| software.name == curated_name)
+            .filter_map(|software: &Software| software.version.as_ref())
+            .map(|s: &String| s.as_str())
+            .collect::<Vec<&str>>()
     }
 }

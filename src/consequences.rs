@@ -19,7 +19,7 @@ use crate::{
     CONSEQUENCE_INFO_VULNERABILITY,
     DEBUG_MODE,
     MAX_CHARS_CUSTOM_REPORT,
-    information::{Computer, InfoRef},
+    information::{Computer, InfoRef, Software},
     node::{Category, Node, State},
 };
 
@@ -84,9 +84,11 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
             handle_subcommand_computer(state, raw_content)
         }
         //Some((CONSEQUENCE_INFO_PORT, _raw_content)) => todo!(),
+        Some((CONSEQUENCE_INFO_SOFTWARE, raw_content)) => {
+            handle_subcommand_software(state, raw_content)
+        }
         Some((CONSEQUENCE_INFO_SERVICE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_DOMAIN, _raw_content)) => todo!(),
-        Some((CONSEQUENCE_INFO_SOFTWARE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_VULNERABILITY, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_FIREWALL, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_FILE, _raw_content)) => todo!(),
@@ -117,6 +119,9 @@ fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Vec<Node> 
     let contents: String = crate::action::get_content(raw_content, stdin);
 
     if contents.is_empty() {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
         Vec::new()
     } else {
         vec![Node::new(Category::Consequence(Consequence::Custom(
@@ -137,9 +142,13 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
        7. return node new computer
     */
 
-    let mut new_computer: Computer = match raw_content.get_one::<String>("name") {
-        Some(arg_name) => Computer::new(arg_name.as_str()),
-        None => return Vec::new(),
+    let mut new_computer: Computer = if let Some(arg_name) = raw_content.get_one::<String>("name") {
+        Computer::new(arg_name.as_str())
+    } else {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
+        return Vec::new();
     };
 
     let arg_port: Vec<u16> = raw_content
@@ -150,9 +159,13 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
 
     new_computer.ports = arg_port;
 
-    let id: usize = match state.add_computer(new_computer) {
-        Some(v) => v,
-        None => return Vec::new(),
+    let id: usize = if let Some(v) = state.add_computer(new_computer) {
+        v
+    } else {
+        if DEBUG_MODE {
+            println!("No node has been created. ");
+        }
+        return Vec::new();
     };
 
     raw_content
@@ -175,9 +188,13 @@ fn handle_subcommand_ip(state: &mut State, raw_content: &ArgMatches) -> Vec<Node
     // get the id of the computer passed as argument or return empty vec + err message
     let computer_id: usize = {
         let computer_tag_opt: Option<&String> = raw_content.get_one::<String>("computer");
-        let computer_tag: &String = match computer_tag_opt {
-            Some(v) => v,
-            None => return Vec::new(),
+        let computer_tag: &String = if let Some(v) = computer_tag_opt {
+            v
+        } else {
+            if DEBUG_MODE {
+                println!("No node has been created. ");
+            }
+            return Vec::new();
         };
 
         let computer_id_opt: Option<usize> = state
@@ -186,9 +203,13 @@ fn handle_subcommand_ip(state: &mut State, raw_content: &ArgMatches) -> Vec<Node
             .iter()
             .position(|c: &Computer| c.name.eq(computer_tag));
 
-        match computer_id_opt {
-            Some(v) => v,
-            None => return Vec::new(),
+        if let Some(v) = computer_id_opt {
+            v
+        } else {
+            if DEBUG_MODE {
+                println!("No node has been created. ");
+            }
+            return Vec::new();
         }
     };
 
@@ -211,4 +232,43 @@ fn handle_subcommand_ip(state: &mut State, raw_content: &ArgMatches) -> Vec<Node
         .collect::<Vec<Node>>();
 
     return ret;
+}
+
+fn handle_subcommand_software(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {
+    let arg_name: &String = if let Some(name) = raw_content.get_one::<String>("name") {
+        name
+    } else {
+        eprintln!("Error: Could not obtain name argument. ");
+        return Vec::new();
+    };
+
+    let arg_descr: String = raw_content
+        .get_one::<String>("description")
+        .cloned()
+        .unwrap_or_default();
+
+    let arg_version: Option<String> = raw_content.get_one::<String>("version").cloned();
+
+    let new_software: Software =
+        Software::new(arg_name.as_str(), arg_descr.as_str(), arg_version.clone());
+
+    let id: usize = if let Some(id) = state.add_software(new_software) {
+        id
+    } else {
+        eprintln!(
+            "Error: New software could not be added. The software with name {arg_name} and version {arg_version:?} already exists. Aborting. "
+        );
+        return Vec::new();
+    };
+
+    // TODO: allow adding vulnerabilities
+
+    let ret: Node = Node::new(Category::Consequence(Consequence::NewInformation(
+        InfoRef {
+            index: id,
+            class: crate::information::InfoClass::Software,
+        },
+    )));
+
+    return vec![ret];
 }

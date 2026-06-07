@@ -211,7 +211,7 @@ impl State {
             .information
             .software
             .iter()
-            .any(|other: &Software| software.name.eq(&other.name));
+            .any(|other: &Software| software.name.eq(&other.name) && software.version.eq(&other.version));
 
         if duplicated {
             return None;

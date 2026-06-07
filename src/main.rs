@@ -84,7 +84,7 @@ const MAX_CHARS_CUSTOM_REPORT: usize = 64;
 const CONF_NAME_ALLOW_NON_ASCII: bool = false;
 const CONF_NAME_CAST_TO_LOWERCASE: bool = true;
 /// 0 = no limit
-const CONF_NAME_MAX_LENGTH: usize = 0; 
+const CONF_NAME_MAX_LENGTH: usize = 0;
 
 pub mod action;
 pub mod consequences;
@@ -179,6 +179,23 @@ fn main() {
                     .arg(Arg::new("computer").required(true))
                     .about("Define wich ports are open for a certain computer. "),),
                 */
+                .subcommand(
+                    Command::new(CONSEQUENCE_INFO_SOFTWARE)
+                        .arg(Arg::new("name").required(true))
+                        .arg(
+                            Arg::new("description")
+                                .short('d')
+                                .long("description")
+                                .aliases(["desc", "des"])
+                                .help("Description of the software or other relevant information you may want to store. ")
+                        ).arg(
+                            Arg::new("version")
+                                .short('v')
+                                .long("version")
+                                .aliases(["vers", "ver"])
+                                .help("Version of the software")
+                        ).about("Relate the provided IP to a computer. "),
+                )
         )
         .subcommand(
             Command::new(SUB_EVENT)
@@ -287,14 +304,14 @@ pub fn standardize_name(name: &str) -> String {
 
     let op_2 = op_1.filter(|c: &char| c.is_ascii() || CONF_NAME_ALLOW_NON_ASCII);
 
-    let op_3 = op_2.filter(|c: &char| !c.is_control()); 
+    let op_3 = op_2.filter(|c: &char| !c.is_control());
 
     let op_4: String = if CONF_NAME_MAX_LENGTH == 0 {
         op_3.collect::<String>()
     } else {
         op_3.take(CONF_NAME_MAX_LENGTH).collect::<String>()
-    }; 
-    
+    };
+
     let ret: String = if CONF_NAME_CAST_TO_LOWERCASE {
         op_4.to_lowercase()
     } else {

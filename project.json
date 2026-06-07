@@ -103,6 +103,50 @@
                     }
                 }
             }
+        },
+        {
+            "time_stamp": "2026-06-07T19:14:11.001923775Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "Software"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-07T19:14:54.353321975Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 1,
+                        "class": "Software"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-07T19:29:43.020287096Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 1,
+                        "class": "Software"
+                    }
+                }
+            }
+        },
+        {
+            "time_stamp": "2026-06-07T19:30:30.666043363Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 2,
+                        "class": "Software"
+                    }
+                }
+            }
         }
     ],
     "information": {
@@ -128,7 +172,26 @@
             "1.1.1.1",
             "2.2.2.2"
         ],
-        "software": [],
+        "software": [
+            {
+                "name": "linux",
+                "description": "cool operating system",
+                "version": "7.1",
+                "vulnerabilities": []
+            },
+            {
+                "name": "gimp",
+                "description": "",
+                "version": "3.0",
+                "vulnerabilities": []
+            },
+            {
+                "name": "firefox",
+                "description": "A normal browser",
+                "version": null,
+                "vulnerabilities": []
+            }
+        ],
         "vulnerabilities": [],
         "domains": [],
         "users": [],
