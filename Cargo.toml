@@ -9,19 +9,46 @@ license-file = "gpl-3.0.md"
 keywords = ["cybersecurity", "documentation"]
 
 
-[lints.rust] # Error appears here in the word "lints"
+[lints.rust] # False positive error (Even Better TOML)
 unsafe_code = "forbid"
 
-[lints.clippy] # Error also appears here in the word "lints"
+[lints.clippy] # False positive error (Even Better TOML)
 pedantic = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
 enum_glob_use = "deny"
 unwrap_used = "deny"
 
+# Allowed lints 
 needless_return = "allow"
 assign_op_pattern = "allow"
 excessive_precision = "allow"
 to_string_trait_impl = "allow" 
+
+# Disallowed from restriction category
+
+allow_attributes_without_reason = "deny"
+as_pointer_underscore = "deny"
+as_underscore = "deny"
+big_endian_bytes = "warn"
+clone_on_ref_ptr = "deny"
+default_numeric_fallback = "deny"
+default_union_representation = "warn"
+disallowed_script_idents = "deny"
+else_if_without_else = "deny"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+filetype_is_file = "deny"
+float_cmp_const = "deny"
+if_then_some_else_none = "deny"
+iter_over_hash_type = "warn"
+map_with_unused_argument_over_ranges = "deny"
+mixed_read_write_in_expression = "deny"
+precedence_bits = "warn"
+return_and_then = "deny"
+semicolon_outside_block = "deny"
+try_err = "deny"
+unseparated_literal_suffix = "warn"
+
 
 [dependencies]
 atty = "0.2.14"

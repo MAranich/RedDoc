@@ -97,7 +97,7 @@ pub mod report;
 
 const DEBUG_MODE: bool = true;
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, reason = "The main function contains the Clap builder that parses the inputs. Breaking this into multiple functions would decrease redability. ")]
 fn main() {
     /*
        The subcommand *command* needs to be parsed differently to the resto of
