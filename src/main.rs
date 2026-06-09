@@ -97,7 +97,10 @@ pub mod report;
 
 const DEBUG_MODE: bool = true;
 
-#[allow(clippy::too_many_lines, reason = "The main function contains the Clap builder that parses the inputs. Breaking this into multiple functions would decrease redability. ")]
+#[allow(
+    clippy::too_many_lines,
+    reason = "The main function contains the Clap builder that parses the inputs. Breaking this into multiple functions would decrease redability. "
+)]
 fn main() {
     /*
        The subcommand *command* needs to be parsed differently to the resto of
@@ -163,15 +166,20 @@ fn main() {
                         Command::new(CONSEQUENCE_INFO_COMPUTER)
                         .arg(Arg::new("name"))
                         .arg(Arg::new("ip").help("An ipv4 or ipv6 ip adress. Can be used multiple times. "))
-                        .arg(Arg::new("port").help("An open port. Can be used multiple times. "))
+                        //.arg(Arg::new("port").help("An open port. Can be used multiple times. "))
                         .arg(Arg::new("os").alias("operating_system").help("The name of the operating system. Must be previusly declared as software. "))
                         .about("Intregrate the existance of a new computer into the model. \nThis is stating that a given computer exists. The argument is a name/tag you give to it. `red_doc cons computer objectie_42`"),
                 )
                 .subcommand(
                     Command::new(CONSEQUENCE_INFO_IP)
-                        .arg(Arg::new("ip_dir").action(ArgAction::Append).required(true))
-                        .arg(Arg::new("computer").required(true))
-                        .about("Relate the provided IP to a computer. "),
+                        .arg(
+                            Arg::new("ip_dir")
+                            .action(ArgAction::Append)
+                            .required(true)
+                        ).arg(
+                            Arg::new("computer")
+                            .required(true)
+                        ).about("Relate the provided IP to a computer. "),
                 )
                 /* 
                 .subcommand(Command::new(CONSEQUENCE_INFO_PORT)
@@ -194,7 +202,30 @@ fn main() {
                                 .long("version")
                                 .aliases(["vers", "ver"])
                                 .help("Version of the software")
-                        ).about("Relate the provided IP to a computer. "),
+                        ).about(""),
+                )
+                .subcommand(
+                Command::new(CONSEQUENCE_INFO_SERVICE)
+                        .arg(
+                            Arg::new("computer_name")
+                            .required(true)
+                            .help("The computer must have already been created. ")
+                        ).arg(
+                            Arg::new("software_name")
+                            .help("The software must have already been created. ")
+                            .long_help("The software that this "))
+                        .arg(
+                            Arg::new("port")
+                                .short('p')
+                                .long("port")
+                                .help("In wich port is the service offered. ")
+                        ).arg(
+                            Arg::new("regex")
+                            .short('r')
+                            .long("regex")
+                            .action(ArgAction::SetTrue)
+                            .help("Treat \"computer_name\" as a regex expression and state theat the service is offered by all computers with a name that matches the regex. ")
+                        ).about("State that some software is offered as a service in a computer. "),
                 )
         )
         .subcommand(
@@ -319,4 +350,47 @@ pub fn standardize_name(name: &str) -> String {
     };
 
     return ret;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standardize_name_as_identity() {
+        // strings that should not be modified
+
+        let cases: [&str; 5] = [
+            "spinx of the black quartz, judge my vow.",
+            "_-abc-_",
+            ":str;",
+            "",
+            "!\"$%&/()=?|@#~{[]}+*^",
+        ];
+        // Not accepted: ·¿½¬
+        for elem in cases {
+            let standardized: String = standardize_name(elem);
+            assert_eq!(elem, standardized);
+        }
+    }
+
+    #[test]
+    fn standardize_name_as_non_identity() {
+        // strings that should be modified
+
+        let cases: [(&str, &str); 4] = [
+            (
+                "SPINX OF THE BLACK QUARTZ, JUDGE MY VOW.",
+                "spinx of the black quartz, judge my vow.",
+            ),
+            ("·¿½¬", ""),
+            ("  untrimmed \n", "untrimmed"),
+            ("control_characters\0\n\t\r", "control_characters"),
+        ];
+
+        for (elem, expected) in cases {
+            let standardized: String = standardize_name(elem);
+            assert_eq!(standardized, expected);
+        }
+    }
 }
