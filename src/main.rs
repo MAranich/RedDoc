@@ -2,7 +2,24 @@
 //!
 //! `RedDoc` is a tool for documentation targeted to cybersecurity profesionals.
 //!
-//!
+//! TODO: complete documentation
+//! 
+//! ## Naming
+//! 
+//! When giving a name to something, you can give it any name you want, but to avoid 
+//! errors whan comparing strings, names are **standardized**. For example, "Linux" and "linux" 
+//! should be treated as the same element, but their binary representation is different. 
+//! To avoid this problem, names are standardized before being used. The following rules are 
+//! applied: 
+//! 1. Set all characters to lowercase (when it applies)
+//! 2. Discard non-ascii characters
+//! 3. Discard control characters
+//! 4. Trim (remove whitespace at start and end)
+//! 5. Limit the length of the name
+//!      - (Disabled by default)
+//! 
+//! 
+//! 
 use atty::Stream;
 use clap::{Arg, ArgAction, Command, command};
 use std::{
@@ -207,13 +224,17 @@ fn main() {
                 .subcommand(
                 Command::new(CONSEQUENCE_INFO_SERVICE)
                         .arg(
+                            Arg::new("name")
+                            .required(true)
+                            .help("The name of the service offered. May be repeated. ")
+                        ).arg(
                             Arg::new("computer_name")
                             .required(true)
                             .help("The computer must have already been created. ")
                         ).arg(
                             Arg::new("software_name")
                             .help("The software must have already been created. ")
-                            .long_help("The software that this "))
+                            .long_help("The software that os providing the server. "))
                         .arg(
                             Arg::new("port")
                                 .short('p')
