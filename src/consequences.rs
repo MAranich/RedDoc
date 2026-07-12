@@ -228,11 +228,9 @@ fn handle_subcommand_software(state: &mut State, raw_content: &ArgMatches) -> Ve
         return Vec::new();
     };
 
-    let arg_descr: &str = if let Some(name) = raw_content.get_one::<String>("description") {
-        name.as_str()
-    } else {
-        ""
-    };
+    let arg_descr: &str = raw_content
+        .get_one::<String>("description")
+        .map_or("", |name| name.as_str());
 
     let arg_comp_name: Option<&String> = raw_content.get_one::<String>("computer_name");
     let computers_id_opt: Option<usize> = match arg_comp_name {
@@ -242,7 +240,7 @@ fn handle_subcommand_software(state: &mut State, raw_content: &ArgMatches) -> Ve
             if comp_id.is_none() {
                 eprint!("Error: Could not find a computer with name {std_name} . Aborting. ");
                 return Vec::new();
-            };
+            }
             comp_id
         }
         None => None,
@@ -288,6 +286,7 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
         return Vec::new();
     };
 
+    #[allow(clippy::option_if_let_else, reason = "Normal version is better")]
     let arg_comp_name: &str = match raw_content.get_one::<String>("computer_name") {
         Some(v) => v.as_str(),
         None => unreachable!(
@@ -297,19 +296,7 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
 
     let use_regex: bool = raw_content.get_flag("regex");
 
-    let computers_id: Vec<usize> = if !use_regex {
-        let std_name: String = standardize_name(arg_comp_name);
-        let id_opt: Option<usize> = state.get_computer_id(&std_name);
-        let comp_id: usize = match id_opt {
-            Some(id) => id,
-            None => {
-                eprint!("Error: Could not find a computer with name {std_name} . Aborting. ");
-                return Vec::new();
-            }
-        };
-
-        vec![comp_id]
-    } else {
+    let computers_id: Vec<usize> = if use_regex {
         let re: Regex = match Regex::new(arg_comp_name) {
             Ok(v) => v,
             Err(e) => {
@@ -328,7 +315,7 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
                     "{}.  Computer \"{}\" \t(id: {i})",
                     matched_computers.len(),
                     computer.name
-                )
+                );
             }
         }
 
@@ -339,6 +326,17 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
         }
 
         matched_computers
+    } else {
+        let std_name: String = standardize_name(arg_comp_name);
+        let id_opt: Option<usize> = state.get_computer_id(&std_name);
+        let comp_id: usize = if let Some(id) = id_opt {
+            id
+        } else {
+            eprint!("Error: Could not find a computer with name {std_name} . Aborting. ");
+            return Vec::new();
+        };
+
+        vec![comp_id]
     };
 
     let arg_port: u16 = if let Some(port) = raw_content.get_one::<String>("port") {
@@ -393,109 +391,6 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
     return ret;
 }
 
-/*
-// old version of the code
-fn service_get_software(
-    state: &mut State,
-    software_name: &str,
-    computers_id: &Vec<usize>,
-) -> Option<usize> {
-    /*
-       Wich version of the software should I use:
-        - The newest one (indicate wich one it is)
-        - The one already installed on the computers
-        - Auto-choose
-
-
-    */
-
-    if DEBUG_MODE {
-        println!("Software name: \"{software_name}\" ");
-        let pretty: String = serde_json::to_string_pretty(&state.information.software)
-            .unwrap_or(format!("{:?}", state.information.software));
-        println!("Software list: \"{}\" ", pretty);
-    }
-
-    /*
-       1. Get all computer objects
-       2. Get all of their software and join lists
-       3. Keep only the software with the correct name
-    */
-    let computer_list: Vec<(usize, &Computer)> = computers_id
-        .iter()
-        .flat_map(|c_id: &usize| {
-            let id: usize = *c_id;
-            state
-                .information
-                .computers
-                .get(id)
-                .map(|c: &Computer| (id, c))
-        })
-        .collect::<Vec<(usize, &Computer)>>();
-
-    /*
-        let mut software_ref = computer_list.iter()
-        .map(|c| &c.software)
-        .flatten()
-        .map(|&id| &state.information.software[id])
-        .filter(|c| c.name == software_name)
-        .collect::<Vec<&Software>>();
-    */
-
-    let mut software_ref: Vec<(usize, Vec<&Software>)> = computer_list
-        .iter()
-        .map(|c: &(usize, &Computer)| (c.0, &c.1.software))
-        .map(|(c_id, soft_ids)| {
-            let mut soft_ref: Vec<&Software> = soft_ids
-                .iter()
-                .map(|id| &state.information.software[*id])
-                .filter(|c| c.name == software_name)
-                .collect();
-            soft_ref.sort_unstable_by(|a, b| a.version.cmp(&b.version));
-            soft_ref.dedup();
-
-            (c_id, soft_ref)
-        })
-        .collect::<Vec<(usize, Vec<&Software>)>>();
-
-    let mut all_software = software_ref
-        .iter()
-        .flat_map(|elem| &elem.1)
-        .copied()
-        .collect::<Vec<&Software>>();
-
-    if all_software.is_empty() {}
-
-    let mut zero_software: Vec<usize> = vec![];
-    let mut one_software: Vec<usize> = vec![];
-    let mut multiple_software: Vec<usize> = vec![];
-
-    for (computer_id, software_list) in software_ref.iter() {
-        match software_list.len() {
-            0 => {
-                zero_software.push(*computer_id);
-            }
-            1 => {
-                one_software.push(*computer_id);
-            }
-            _ => {
-                multiple_software.push(*computer_id);
-            }
-        }
-    }
-
-    all_software.sort_unstable_by(|&a, &b| a.version.cmp(&b.version));
-    all_software.dedup();
-
-    if !zero_software.is_empty() {
-        println!("The foll");
-        for comp_id in zero_software {}
-    }
-
-    Some(0)
-}
-*/
-
 fn service_get_software(
     state: &mut State,
     software_name: &str,
@@ -526,30 +421,6 @@ fn service_get_software(
                 Note: for options 2 and 3 also ask for addition of the software in computers
         - Abort
     */
-    /*
-    Old comments:
-    ***
-       Wich version of the software should I use:
-       - Auto-choose (fast mode)
-           - Will try to use the software with empty version field.
-              - If not found, then it will use the first version it finds.
-           - Will NOT add to the computers if it is missing
-        - *This* one (indicate wich one it is)
-            - Following question: Do you want me to add the software version to the computer if it does not contain it? (y/n)
-        - The one already installed on the computers
-             - Case: no version foundss
-             - Case: multiple versions found (same computer)
-             - Case: multiple versions found (multiple computer)
-             - Case: the same version installed on all computers
-             - Case computer with no version
-
-
-            - Following question: If version not found: I have not found *software* in *computer* . Options:
-                - Abort
-                - Use another version (and ADD to the computer) + select
-                - Use another version (and do NOT add to the computer) + select
-                - Autoselect other version
-    */
 
     // Get all of the versions of the software (and it's id )
     let all_software: Vec<(usize, &Software)> = state
@@ -563,7 +434,8 @@ fn service_get_software(
     if all_software.is_empty() {
         eprint!("There does not exist a software with the name \"{software_name}\" . Aborting. ");
         return None;
-    } else if all_software.len() == 1 {
+    }
+    if all_software.len() == 1 {
         let software_id: usize = all_software.first().expect("must exist").0;
 
         // Check if all computers have the software installed
@@ -597,7 +469,7 @@ fn service_get_software(
         let awnser: bool = ask_bool_question(&question);
 
         let mut added_software_count: i32 = 0;
-        if awnser == true {
+        if awnser {
             // check all computera again, but now add the software
             for &comp_id in computers_id {
                 let computer: &mut Computer = &mut state.information.computers[comp_id];
@@ -609,7 +481,8 @@ fn service_get_software(
 
                 if !contains_software {
                     computer.software.push(software_id);
-                    added_software_count += 1;
+
+                    added_software_count += 1_i32;
                     if DEBUG_MODE {
                         println!(
                             "{added_software_count}.  Software added to the computer \"{}\" (id: {comp_id})",
@@ -624,8 +497,25 @@ fn service_get_software(
     }
     // Case: multiple software options.
 
+    let all_software_ids: Vec<usize> = all_software.iter().map(|(x, _)| *x).collect::<Vec<usize>>();
+
+    return service_select_software_from_multiple(
+        state,
+        software_name,
+        computers_id,
+        all_software_ids,
+    );
+}
+
+// Function made to break up larger function
+fn service_select_software_from_multiple(
+    state: &mut State,
+    software_name: &str,
+    computers_id: &Vec<usize>,
+    all_software_ids: Vec<usize>,
+) -> Option<usize> {
     let (intersection, union) = {
-        let software_lists = computers_id.iter().flat_map(|c_id: &usize| {
+        let software_lists = computers_id.iter().filter_map(|c_id: &usize| {
             let comp_id: usize = *c_id;
             state
                 .information
@@ -640,18 +530,18 @@ fn service_get_software(
 
         let mut intersection: Vec<usize> = hashsets
             .clone()
-            .reduce(|a: HashSet<usize>, b: HashSet<usize>| a.intersection(&b).cloned().collect())
-            .map(|hashmap: HashSet<usize>| hashmap.iter().cloned().collect::<Vec<usize>>())
+            .reduce(|a: HashSet<usize>, b: HashSet<usize>| a.intersection(&b).copied().collect())
+            .map(|hashmap: HashSet<usize>| hashmap.iter().copied().collect::<Vec<usize>>())
             .unwrap_or(vec![]);
 
         let mut union: Vec<usize> = hashsets
-            .reduce(|a: HashSet<usize>, b: HashSet<usize>| a.union(&b).cloned().collect())
-            .map(|hashmap: HashSet<usize>| hashmap.iter().cloned().collect::<Vec<usize>>())
+            .reduce(|a: HashSet<usize>, b: HashSet<usize>| a.union(&b).copied().collect())
+            .map(|hashmap: HashSet<usize>| hashmap.iter().copied().collect::<Vec<usize>>())
             .unwrap_or(vec![]);
 
         // sort for consistent results
-        intersection.sort();
-        union.sort();
+        intersection.sort_unstable();
+        union.sort_unstable();
 
         (intersection, union)
     };
@@ -675,35 +565,6 @@ fn service_get_software(
         }
     };
 
-    // I put this in a closure to reduce code duplication
-    let mut add_software_to_computers = |selected_id: usize| {
-        // does not check if software is not contained in computrs, it is assumed
-        let software_version_selected: Option<&String> =
-            (&state.information.software[selected_id].version).as_ref();
-        let question_add_software: String = format!(
-            "The software selected {software_name} v: {:?} is not included as part of the software of all the computers affected. Do you wish to add the selected software to the computers? ",
-            software_version_selected
-                .map(|s| s.as_str())
-                .unwrap_or("None")
-        );
-
-        let add_software: bool = ask_bool_question(&question_add_software);
-        if add_software {
-            for &c_id in computers_id {
-                let computer: &mut Computer = &mut state.information.computers[c_id];
-                let contains_software: bool = computer
-                    .software
-                    .iter()
-                    .position(|s: &usize| selected_id == *s)
-                    .is_some();
-                if !contains_software {
-                    // add the software to the computer
-                    computer.software.push(selected_id);
-                }
-            }
-        }
-    };
-
     if autoselect {
         if let Some(first) = intersection.first() {
             if DEBUG_MODE {
@@ -715,6 +576,7 @@ fn service_get_software(
             return Some(*first);
         }
 
+        #[allow(clippy::option_if_let_else, reason = "Normal version is better. ")]
         let selected_id: usize = if let Some(first) = union.first() {
             if DEBUG_MODE {
                 println!(
@@ -731,18 +593,36 @@ fn service_get_software(
             }
 
             // use from all_software
-            let id: usize = all_software
+            let id: usize = *all_software_ids
                 .first()
-                .expect("`all_software` must be non-empty. ")
-                .0;
+                .expect("`all_software` must be non-empty. ");
             id
         };
 
-        add_software_to_computers(selected_id);
+        add_software_to_computers(state, selected_id, software_name, computers_id);
         return Some(selected_id);
     }
     // maual selection
 
+    return Some(service_software_manual_selection(
+        state,
+        intersection,
+        union,
+        all_software_ids,
+        software_name,
+        computers_id,
+    ));
+}
+
+// Function made to break up larger function
+fn service_software_manual_selection(
+    state: &mut State,
+    intersection: Vec<usize>,
+    union: Vec<usize>,
+    all_software_ids: Vec<usize>,
+    software_name: &str,
+    computers_id: &Vec<usize>,
+) -> usize {
     // select the list of versions you want to select from
     let awnser_collection: usize = {
         let question_collection: &str = "Select a set to reduce searc space. \n - \"intersection\" contains \
@@ -760,7 +640,7 @@ fn service_get_software(
         );
         let option_all: String = format!(
             "Select an element from all possible choices (contains {} elements)",
-            all_software.len()
+            all_software_ids.len()
         );
 
         let options_collection: [&str; 3] = [
@@ -775,10 +655,7 @@ fn service_get_software(
     let collection: Vec<usize> = match awnser_collection {
         1 => intersection,
         2 => union,
-        3 => all_software
-            .iter()
-            .map(|x: &(usize, &Software)| x.0)
-            .collect::<Vec<usize>>(),
+        3 => all_software_ids,
         _ => unreachable!("This branch should be unreachable. "),
     };
 
@@ -787,14 +664,11 @@ fn service_get_software(
             .iter()
             .map(|&id| (id, &state.information.software[id].version))
             .map(|(id, version)| -> (usize, &str) {
-                let ver_str: &str = version
-                    .as_ref()
-                    .map(|v: &String| v.as_str())
-                    .unwrap_or("None");
+                let ver_str: &str = version.as_ref().map_or("None", |v: &String| v.as_str());
                 (id, ver_str)
             })
             .collect::<Vec<(usize, &str)>>();
-        list.sort_by(|(_, a_v), (_, b_v)| a_v.cmp(b_v));
+        list.sort_by_key(|(_, ver)| *ver);
         list
     };
 
@@ -807,6 +681,33 @@ fn service_get_software(
     let awnser_version: usize = ask_options_question(question_version, &options_version);
 
     let final_index_software: usize = version_list[awnser_version - 1].0;
-    add_software_to_computers(final_index_software);
-    return Some(final_index_software);
+    add_software_to_computers(state, final_index_software, software_name, computers_id);
+    return final_index_software;
+}
+
+fn add_software_to_computers(
+    state: &mut State,
+    selected_id: usize,
+    software_name: &str,
+    computers_id: &Vec<usize>,
+) {
+    // does not check if software is not contained in computrs, it is assumed
+    let software_version_selected: Option<&String> =
+        state.information.software[selected_id].version.as_ref();
+    let question_add_software: String = format!(
+        "The software selected {software_name} v: {:?} is not included as part of the software of all the computers affected. Do you wish to add the selected software to the computers? ",
+        software_version_selected.map_or("None", std::string::String::as_str)
+    );
+
+    let add_software: bool = ask_bool_question(&question_add_software);
+    if add_software {
+        for &c_id in computers_id {
+            let computer: &mut Computer = &mut state.information.computers[c_id];
+            let contains_software: bool = computer.software.contains(&selected_id);
+            if !contains_software {
+                // add the software to the computer
+                computer.software.push(selected_id);
+            }
+        }
+    }
 }

@@ -88,7 +88,7 @@ fn time_line_to_markdown(time_line: &Timeline) -> String {
     }
     // Now the index of each collecion are sorted by the time the node was created.
 
-    group_by_day.sort_by(|x, y| x.0.cmp(&y.0));
+    group_by_day.sort_by_key(|x| x.0);
 
     // Now the groups themselves are sorted.
 

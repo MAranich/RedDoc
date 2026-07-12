@@ -5,6 +5,14 @@
 use std::io;
 use std::io::Write;
 
+
+/// 
+/// ## Panics
+/// 
+/// Panics may be caused if the user sends invalid UTF-8 characters or if the
+/// `Read` method returns an error.
+/// 
+#[must_use] 
 pub fn ask_bool_question(question: &str) -> bool {
     const ACCEPT_CHAR: char = 'y';
     const REJECT_CHAR: char = 'n';
@@ -36,7 +44,7 @@ pub fn ask_bool_question(question: &str) -> bool {
                 if c_low == REJECT_CHAR {
                     break false;
                 }
-                println!("What you inserted is not a valid awnser. {INSTRUCTIONS}")
+                println!("What you inserted is not a valid awnser. {INSTRUCTIONS}");
             }
             None => println!("You need to awnser the question. {INSTRUCTIONS}"),
         }
@@ -45,6 +53,14 @@ pub fn ask_bool_question(question: &str) -> bool {
     return ret;
 }
 
+
+/// 
+/// ## Panics
+/// 
+/// Panics may be caused if the user sends invalid UTF-8 characters or if the
+/// `Read` method returns an error.
+/// 
+#[must_use] 
 pub fn ask_options_question(question: &str, options: &[&str]) -> usize {
     const INSTRUCTIONS: &str =
         "Type *only* the number of the option you want or ctrl + C to terminate the program. \n";
@@ -74,10 +90,10 @@ pub fn ask_options_question(question: &str, options: &[&str]) -> usize {
                 if (1..=options.len()).contains(&number) {
                     break number;
                 }
-                println!("The number you inserted is out of range. {INSTRUCTIONS}")
+                println!("The number you inserted is out of range. {INSTRUCTIONS}");
             }
             Err(_e) => {
-                println!("The awnser you provided was empty or invalid. {INSTRUCTIONS}")
+                println!("The awnser you provided was empty or invalid. {INSTRUCTIONS}");
             }
         }
     };

@@ -220,11 +220,10 @@ impl State {
         }
 
         let id: usize = self.information.software.len();
-        if let Some(computer_id) = computer_id_opt {
-            if let Some(computer) = self.information.computers.get_mut(computer_id) {
+        if let Some(computer_id) = computer_id_opt
+            && let Some(computer) = self.information.computers.get_mut(computer_id) {
                 computer.software.push(id);
             }
-        }
 
         self.information.software.push(software);
         return Some(id);
@@ -248,17 +247,14 @@ impl State {
             .iter()
             .position(|s: &Service| service.eq(s));
 
-        let idx: usize = match duplicated {
-            Some(idx) => idx,
-            None => {
-                let idx: usize = self.information.services.len();
-                self.information.services.push(service);
+        let idx: usize = if let Some(idx) = duplicated { idx } else {
+            let idx: usize = self.information.services.len();
+            self.information.services.push(service);
 
-                idx
-            }
+            idx
         };
 
-        let service_already_in_computer: bool = computer.services.iter().any(|x| *x == idx);
+        let service_already_in_computer: bool = computer.services.contains(&idx);
         if service_already_in_computer {
             let service_name: &str = self.information.services[idx].name.as_str();
             eprintln!(

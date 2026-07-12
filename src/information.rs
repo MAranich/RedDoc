@@ -4,7 +4,7 @@
 //!
 
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
+use std::{hash::Hash, net::IpAddr};
 
 use crate::{standardize_name, standardize_version};
 
@@ -83,7 +83,7 @@ pub enum ComputerControl {
 }
 
 /// Some software used somewhere
-#[derive(Debug, Clone, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Software {
     pub name: String,
     pub description: String,
@@ -180,8 +180,24 @@ impl PartialEq for Software {
 
 impl Eq for Software {}
 
+impl Hash for Software {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        /*
+            We use the defualt implementation for hash even if the Eq implementation does not coincide. 
+            The hash is used as a part of the state to check for changes, and we need to detect changes 
+            in the fields of description and vulnerabilities, wich are not needed for normal comparasion
+            where we want to detect if they represent the same thing. 
+         */
+        self.name.hash(state);
+        self.description.hash(state);
+        self.version.hash(state);
+        self.vulnerabilities.hash(state);
+    }
+}
+
 impl Service {
     /// Invariants: name must be standardized
+    #[must_use] 
     pub fn new(name: &str, port_: u16) -> Self {
         let std_name: String = standardize_name(name);
         return Self {
