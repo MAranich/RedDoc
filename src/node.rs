@@ -7,7 +7,7 @@ use crate::{
     action::Action,
     consequences::Consequence,
     event::Event,
-    information::{Computer, Information, Software, User, Vulnerability},
+    information::{Computer, Information, Service, Software, User, Vulnerability},
 };
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -191,9 +191,9 @@ impl State {
         }
 
         let computer: &mut Computer = self.information.computers.get_mut(id_computer)?;
-        
+
         let id_ip: usize = self.information.ips.len();
-        
+
         self.information.ips.push(ip);
         computer.ips.push(id_ip);
 
@@ -206,19 +206,71 @@ impl State {
     }
 
     /// Adds [Software] to the [`State`]. Returns [None] if it already exists.  
-    pub fn add_software(&mut self, software: Software) -> Option<usize> {
-        let duplicated: bool = self
-            .information
-            .software
-            .iter()
-            .any(|other: &Software| software.name.eq(&other.name) && software.version.eq(&other.version));
+    pub fn add_software(
+        &mut self,
+        software: Software,
+        computer_id_opt: Option<usize>,
+    ) -> Option<usize> {
+        let duplicated: bool = self.information.software.iter().any(|other: &Software| {
+            software.name.eq(&other.name) && software.version.eq(&other.version)
+        });
 
         if duplicated {
             return None;
         }
 
+        let id: usize = self.information.software.len();
+        if let Some(computer_id) = computer_id_opt {
+            if let Some(computer) = self.information.computers.get_mut(computer_id) {
+                computer.software.push(id);
+            }
+        }
+
         self.information.software.push(software);
-        return Some(self.information.software.len() - 1);
+        return Some(id);
+    }
+
+    /// Adds [Service] to the [`State`]. Returns [None] the data is invalid.
+    ///
+    /// If the service already exists in the global state, then just the
+    /// computer is updated by adding a reference.
+    pub fn add_service(&mut self, service: Service, computer_id: usize) -> Option<usize> {
+        let computer: &mut Computer = match self.information.computers.get_mut(computer_id) {
+            Some(c) => c,
+            None => {
+                return None;
+            }
+        };
+
+        let duplicated: Option<usize> = self
+            .information
+            .services
+            .iter()
+            .position(|s: &Service| service.eq(s));
+
+        let idx: usize = match duplicated {
+            Some(idx) => idx,
+            None => {
+                let idx: usize = self.information.services.len();
+                self.information.services.push(service);
+
+                idx
+            }
+        };
+
+        let service_already_in_computer: bool = computer.services.iter().any(|x| *x == idx);
+        if service_already_in_computer {
+            let service_name: &str = self.information.services[idx].name.as_str();
+            eprintln!(
+                "Computer \"{}\" already contains the service {} (same software/port)",
+                computer.name, service_name
+            );
+            return None;
+        }
+
+        computer.services.push(idx);
+
+        return Some(idx);
     }
 
     /// Adds a [Vulnerability] to the [`State`]. Returns [None] if it already exists.  
@@ -289,7 +341,11 @@ impl State {
             "id of ip adress does not exist"
         );
 
-        let ip: &IpAddr = self.information.ips.get(id_ip).unwrap_or_else(|| panic!("id of ip adress does not exist"));
+        let ip: &IpAddr = self
+            .information
+            .ips
+            .get(id_ip)
+            .unwrap_or_else(|| panic!("id of ip adress does not exist"));
 
         // id are valid
 
@@ -311,7 +367,7 @@ impl State {
                 println!(
                     "Ip {} (id: {}) is now asociated to Computer {} (id: {}). ",
                     ip, id_ip, computer.name, id_computer
-                ); 
+                );
             }
         }
     }

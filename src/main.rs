@@ -3,27 +3,28 @@
 //! `RedDoc` is a tool for documentation targeted to cybersecurity profesionals.
 //!
 //! TODO: complete documentation
-//! 
+//!
 //! ## Naming
-//! 
-//! When giving a name to something, you can give it any name you want, but to avoid 
-//! errors whan comparing strings, names are **standardized**. For example, "Linux" and "linux" 
-//! should be treated as the same element, but their binary representation is different. 
-//! To avoid this problem, names are standardized before being used. The following rules are 
-//! applied: 
+//!
+//! When giving a name to something, you can give it any name you want, but to avoid
+//! errors whan comparing strings, names are **standardized**. For example, "Linux" and "linux"
+//! should be treated as the same element, but their binary representation is different.
+//! To avoid this problem, names are standardized before being used. The following rules are
+//! applied:
 //! 1. Set all characters to lowercase (when it applies)
 //! 2. Discard non-ascii characters
 //! 3. Discard control characters
 //! 4. Trim (remove whitespace at start and end)
 //! 5. Limit the length of the name
 //!      - (Disabled by default)
-//! 
-//! 
-//! 
+//!
+//!
+//!
 use atty::Stream;
 use clap::{Arg, ArgAction, Command, command};
 use std::{
     env,
+    hash::{DefaultHasher, Hash, Hasher},
     io::{self, Read},
     path::Path,
 };
@@ -33,6 +34,7 @@ use crate::{
     consequences::process_consequences,
     event::process_event,
     node::State,
+    questions::ask_bool_question,
     report::process_report,
 };
 
@@ -102,12 +104,14 @@ const CONF_NAME_ALLOW_NON_ASCII: bool = false;
 const CONF_NAME_CAST_TO_LOWERCASE: bool = true;
 /// 0 = no limit
 const CONF_NAME_MAX_LENGTH: usize = 0;
+const CONF_VERSION_MAX_LENGTH: usize = 50;
 
 pub mod action;
 pub mod consequences;
 pub mod event;
 pub mod information;
 pub mod node;
+pub mod questions;
 pub mod report;
 
 // ****************************
@@ -133,6 +137,11 @@ fn main() {
     let report_path: &Path = Path::new("./report.md");
 
     let mut state: State = State::get_state(project_path);
+    let original_state_hash: u64 = {
+        let mut hasher: DefaultHasher = DefaultHasher::new();
+        state.hash(&mut hasher);
+        hasher.finish()
+    };
 
     // ////////////////
 
@@ -149,6 +158,16 @@ fn main() {
             if let Some((input_node, output_node)) = command_nodes {
                 state.add_node(&input_node);
                 state.add_node(&output_node);
+            }
+
+            let updated_state_hash: u64 = {
+                let mut hasher: DefaultHasher = DefaultHasher::new();
+                state.hash(&mut hasher);
+                hasher.finish()
+            };
+            if updated_state_hash == original_state_hash {
+                println!("No changes were made. ");
+                return;
             }
 
             let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
@@ -208,6 +227,10 @@ fn main() {
                     Command::new(CONSEQUENCE_INFO_SOFTWARE)
                         .arg(Arg::new("name").required(true))
                         .arg(
+                            Arg::new("computer_name")
+                            .required(false)
+                            .help("The computer must have already been created. ")
+                        ).arg(
                             Arg::new("description")
                                 .short('d')
                                 .long("description")
@@ -233,6 +256,7 @@ fn main() {
                             .help("The computer must have already been created. ")
                         ).arg(
                             Arg::new("software_name")
+                            .required(false)
                             .help("The software must have already been created. ")
                             .long_help("The software that os providing the server. "))
                         .arg(
@@ -270,10 +294,11 @@ fn main() {
         )
         .subcommand(
             Command::new(SUB_CONFIG)
-                .about(ABOUT_CONFIG_CLAP)
-                .alias("conf"),
+            .about(ABOUT_CONFIG_CLAP)
+            .alias("conf"),
         )
         .subcommand(Command::new(SUB_REPORT).about("Generate a report of the collected data. "))
+        .subcommand(Command::new("debug").about("For development and debug pruposes only. "))
         .get_matches();
 
     // //////////
@@ -295,6 +320,16 @@ fn main() {
             eprintln!("No subcommand provided. ");
             return;
         }
+    }
+
+    let updated_state_hash: u64 = {
+        let mut hasher: DefaultHasher = DefaultHasher::new();
+        state.hash(&mut hasher);
+        hasher.finish()
+    };
+    if updated_state_hash == original_state_hash {
+        println!("No changes were made. ");
+        return;
     }
 
     let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
@@ -349,7 +384,7 @@ pub fn standardize_name(name: &str) -> String {
        1. Trim (remove whitespace at start and end)
        2. Discard non-ascii
        3. Discard control characters
-       4. Limit max amount of characters
+       4. Limit max amount of characters (default: unlimited)
        5. Map all characters to lowercase (if aplicable)
     */
     let op_1: std::str::Chars<'_> = name.trim().chars();
@@ -371,6 +406,45 @@ pub fn standardize_name(name: &str) -> String {
     };
 
     return ret;
+}
+
+#[must_use]
+pub fn standardize_version(name: &str) -> String {
+    /*
+        We use the same procedure as in standardize_name but we do not set the characters to lowercase.
+       Operations:
+       1. Trim (remove whitespace at start and end)
+       2. Discard non-ascii
+       3. Discard control characters
+       4. Limit max amount of characters (default: 50)
+    */
+
+    let op_1: std::str::Chars<'_> = name.trim().chars();
+
+    let op_2 = op_1.filter(|c: &char| c.is_ascii() || CONF_NAME_ALLOW_NON_ASCII);
+
+    let op_3 = op_2.filter(|c: &char| !c.is_control());
+
+    let ret: String = if CONF_VERSION_MAX_LENGTH == 0 {
+        op_3.collect::<String>()
+    } else {
+        op_3.take(CONF_VERSION_MAX_LENGTH).collect::<String>()
+    };
+
+    return ret;
+}
+
+pub fn process_debug(_sub_match: &clap::ArgMatches, _stdin: &str, _state: &mut State) {
+    println!("================================================");
+    println!("======             DEBUG MODE            =======");
+    println!("================================================");
+
+    let awnser: bool = ask_bool_question("Awnser yes. ");
+    if awnser {
+        println!("correct");
+    } else {
+        println!("incorrect");
+    }
 }
 
 #[cfg(test)]

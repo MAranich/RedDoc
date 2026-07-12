@@ -1,0 +1,13 @@
+
+## Manual tests
+
+
+
+
+
+
+cargo run -- cons service -p 22 ssh pikachu
+cargo run -- cons service -p 23 ssh pikachu OpenSSH
+
+
+

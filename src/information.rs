@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-use crate::standardize_name;
+use crate::{standardize_name, standardize_version};
 
 /// Information that has been obtained
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -14,6 +14,7 @@ pub struct Information {
     pub computers: Vec<Computer>,
     pub ips: Vec<IpAddr>,
     pub software: Vec<Software>,
+    pub services: Vec<Service>,
     pub vulnerabilities: Vec<Vulnerability>,
     pub domains: Vec<String>,
     pub users: Vec<User>,
@@ -27,6 +28,7 @@ pub enum InfoClass {
     IP,
     Software,
     Vulnerability,
+    Service,
     Domain,
     User,
     Fact,
@@ -51,8 +53,10 @@ pub struct Computer {
     pub ips: Vec<usize>,
     /// List of open / relevant ports
     pub ports: Vec<u16>,
-    /// Valid Indices to the [Information] stuct (software column)
+    /// Valid Indices to the [Information] struct (service column)
     pub services: Vec<usize>,
+    /// Valid Indices to the [Information] struct (software column)
+    pub software: Vec<usize>,
     pub is_honeypot: bool,
     /// The bool indicates if virtulization was used. The second term is an
     /// optional reference to the virtualitzation software used.
@@ -79,7 +83,7 @@ pub enum ComputerControl {
 }
 
 /// Some software used somewhere
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct Software {
     pub name: String,
     pub description: String,
@@ -97,6 +101,16 @@ pub struct Vulnerability {
     /// (optinal), code used to exploit this vulnerability
     pub exploit: String,
     pub known_vunlerable_versions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Service {
+    /// Name of the service / protocol (ssh, rdp...)
+    pub name: String,
+    /// The port at wich the service is exposed
+    pub port: u16,
+    /// Optional reference to the software used
+    pub software: Option<usize>,
 }
 
 /// Subject (possibly a person) related.
@@ -125,13 +139,14 @@ pub enum Credential {
 impl Computer {
     #[must_use]
     pub fn new(name_: &str) -> Self {
-        let curated_name: String = standardize_name(name_);
+        let std_name: String = standardize_name(name_);
 
         return Self {
-            name: curated_name,
+            name: std_name,
             ips: Vec::new(),
             ports: Vec::new(),
             services: Vec::new(),
+            software: Vec::new(),
             is_honeypot: false,
             is_virtualized: (false, None),
             infection_level: ComputerControl::None,
@@ -143,14 +158,37 @@ impl Computer {
 impl Software {
     #[must_use]
     pub fn new(name_: &str, description_: &str, version_: Option<String>) -> Self {
-        let curated_name: String = standardize_name(name_);
+        let std_name: String = standardize_name(name_);
+        let std_version: Option<String> = version_.map(|v: String| standardize_version(&v));
 
         Self {
-            name: curated_name,
+            name: std_name,
             description: description_.to_string(),
-            version: version_,
+            version: std_version,
             vulnerabilities: Vec::new(),
         }
+    }
+}
+
+impl PartialEq for Software {
+    fn eq(&self, other: &Self) -> bool {
+        // We consider software to be equal if the name and version coincide.
+        // We ignore differences in their descriptions or list of vulnerabilities.
+        self.name == other.name && self.version == other.version
+    }
+}
+
+impl Eq for Software {}
+
+impl Service {
+    /// Invariants: name must be standardized
+    pub fn new(name: &str, port_: u16) -> Self {
+        let std_name: String = standardize_name(name);
+        return Self {
+            name: std_name,
+            software: None,
+            port: port_,
+        };
     }
 }
 
@@ -162,6 +200,7 @@ impl Information {
             computers: Vec::new(),
             ips: Vec::new(),
             software: Vec::new(),
+            services: Vec::new(),
             vulnerabilities: Vec::new(),
             domains: Vec::new(),
             users: Vec::new(),
