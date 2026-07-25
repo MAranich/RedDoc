@@ -178,12 +178,30 @@ fn main() {
         }
     }
 
+    let ttp_option: Arg = Arg::new("ttp")
+        .global(true)
+        .long("tactics_techniques_procedures")
+        .required(false)
+        .action(ArgAction::Append)
+        .alias("ttp")
+        .alias("tactic")
+        .alias("technique")
+        .alias("procedure")
+        .alias("ttp_category")
+        .alias("ttp_cat")
+        .long_help("TTPs (tactics, techniques and procedures) are strategies used by attackers to obtain an advantage and advance on their objectives. \
+        RedDoc uses the ma matrix as the base of all possible TTPs. See https://attack.mitre.org/ for more information. \n\n\
+        There are multiple categories 
+        ")
+        .help("The TTP used to perform the action. ");
+
     let matches: clap::ArgMatches = command!()
         .subcommand(
             Command::new(SUB_ACTION)
                 .about(ABOUT_ACTION_CLAP)
                 .alias("act")
                 .alias("a")
+                .arg(ttp_option)
                 .subcommand(
                     Command::new(ACTION_CUSTOM)
                         .arg(Arg::new("content"))
@@ -210,10 +228,12 @@ fn main() {
                     Command::new(CONSEQUENCE_INFO_IP)
                         .arg(
                             Arg::new("ip_dir")
+                            .help("One or many IP directions. Can be either IPv4 or IPv6. ")
                             .action(ArgAction::Append)
                             .required(true)
                         ).arg(
                             Arg::new("computer")
+                            .help("The name of the computer. (must already exist)")
                             .required(true)
                         ).about("Relate the provided IP to a computer. "),
                 )
@@ -229,7 +249,7 @@ fn main() {
                         .arg(
                             Arg::new("computer_name")
                             .required(false)
-                            .help("The computer must have already been created. ")
+                            .help("The name of the computer. (must already exist)")
                         ).arg(
                             Arg::new("description")
                                 .short('d')
@@ -241,8 +261,8 @@ fn main() {
                                 .short('v')
                                 .long("version")
                                 .aliases(["vers", "ver"])
-                                .help("Version of the software")
-                        ).about(""),
+                                .help("The version of the software. ")
+                        ).about("Assert that a certain computer has some software. "),
                 )
                 .subcommand(
                 Command::new(CONSEQUENCE_INFO_SERVICE)

@@ -141,8 +141,10 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
         eprint!("Error: Could not obtain \"name\" argument. ");
         return Vec::new();
     };
-    let mut new_computer: Computer = Computer::new(name.as_str());
+    let new_computer: Computer = Computer::new(name.as_str());
 
+    /*
+    
     let arg_port: Vec<u16> = raw_content
         .get_many::<String>("port")
         .unwrap_or_default()
@@ -150,6 +152,7 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
         .collect::<Vec<u16>>();
 
     new_computer.ports = arg_port;
+    */
 
     let id: usize = if let Some(v) = state.add_computer(new_computer) {
         v

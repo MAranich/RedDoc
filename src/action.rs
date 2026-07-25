@@ -9,11 +9,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
+    information::TTP,
     node::{Category, KnownCommnad, Node, State},
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Action {
+pub enum ActionCategory {
     /// A custom action, the user may store any string
     Custom(String),
     /// The execution of a command (the output is sored in another node)
@@ -23,10 +24,16 @@ pub enum Action {
     // Script(String)
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Action {
+    category: ActionCategory,
+    ttp: Vec<TTP>,
+}
+
 impl ToString for Action {
     fn to_string(&self) -> String {
-        match self {
-            Self::Custom(content) => {
+        let category_str: String = match &self.category {
+            ActionCategory::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
@@ -47,9 +54,18 @@ impl ToString for Action {
                 format!("custom: {curated}{clamped}")
             }
             _ => todo!("Currently not implemented. "),
-        }
+        };
+
+        let string: String = if !self.ttp.is_empty() {
+            format!("Action{{{:?}, {category_str}}}", self.ttp)
+        } else {
+            format!("Action{{{category_str}}}")
+        };
+        return string;
     }
 }
+
+impl Action {}
 
 /// Processes the action
 ///
@@ -77,7 +93,16 @@ pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
         return;
     }
 
-    let new_node: Node = new_node.expect("To contain the Some variant. ");
+    let mut new_node: Node = new_node.expect("To contain the Some variant. ");
+
+    // Add TTPs
+    let ttps: Vec<TTP> = sub_match
+        .get_many::<String>("ttp")
+        .unwrap_or_default()
+        .map(|v| TTP::from(v.as_str()))
+        .collect::<Vec<TTP>>();
+
+    add_ttp_to_node(&mut new_node, ttps); 
 
     if DEBUG_MODE {
         println!("New node: \n{new_node:?}");
@@ -86,13 +111,23 @@ pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
     state.add_node(&new_node);
 }
 
+pub fn add_ttp_to_node(node: &mut Node, ttp: Vec<TTP>) {
+    if let Category::Action(action) = &mut node.category {
+        action.ttp = ttp;
+    }
+}
+
 fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
     let contents: String = get_content(raw_content, stdin);
 
     if contents.is_empty() {
         None
     } else {
-        Some(Node::new(Category::Action(Action::Custom(contents))))
+        let action: Action = Action {
+            category: ActionCategory::Custom(contents),
+            ttp: Vec::new(),
+        };
+        Some(Node::new(Category::Action(action)))
     }
 }
 
@@ -164,9 +199,9 @@ pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
                 - With the provided args and stdin
         3. Store the result of the execution as a consequence.
 
-        Possible improvements for this function: 
-        - a version that avoids the shell entirely  
-        - a version that supports interactive commands  
+        Possible improvements for this function:
+        - a version that avoids the shell entirely
+        - a version that supports interactive commands
         - a version that streams output live instead of waiting
     */
 
@@ -248,7 +283,11 @@ pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
                 ))
             };
 
-            let input_node: Node = Node::new(Category::Action(Action::Command(args)));
+            let action: Action = Action {
+                category: ActionCategory::Command(args),
+                ttp: Vec::new(),
+            };
+            let input_node: Node = Node::new(Category::Action(action));
 
             ret = Some((input_node, output_node));
         }

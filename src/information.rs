@@ -4,7 +4,7 @@
 //!
 
 use serde::{Deserialize, Serialize};
-use std::{hash::Hash, net::IpAddr};
+use std::{fmt::Display, hash::Hash, net::IpAddr};
 
 use crate::{standardize_name, standardize_version};
 
@@ -136,6 +136,43 @@ pub enum Credential {
     PrivateKey(String),
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TTP {
+    /// The name of the technique itself
+    Name(String),
+    /// The category of the technique used (what is the objective)
+    Tactic(Tactic),
+    /// What method was used. The id is stored
+    ///
+    /// `T1548` -> `TTP::Technique(1548)`
+    Technique(u16),
+    /// What method was used and the subtechnique. The id of the technique and subtechnique is stored
+    ///
+    /// `T1548.001` -> `TTP::Technique(1548, 1)`
+    SubTechnique(u16, u8),
+}
+
+/// Obtained from: https://attack.mitre.org/tactics/enterprise/
+/// (07/2026)
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Tactic {
+    Reconnaissance = 43,
+    ResourceDevelopment = 42,
+    InitialAccess = 1,
+    Execution = 2,
+    Persistence = 3,
+    PrivilegeEscalation = 4,
+    Stealth = 5,
+    DefenseImpairment = 112,
+    CredentialAccess = 6,
+    Discovery = 7,
+    LateralMovement = 8,
+    Collection = 9,
+    CommandControl = 11,
+    Exfiltration = 10,
+    Impact = 40,
+}
+
 impl Computer {
     #[must_use]
     pub fn new(name_: &str) -> Self {
@@ -183,11 +220,11 @@ impl Eq for Software {}
 impl Hash for Software {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         /*
-            We use the defualt implementation for hash even if the Eq implementation does not coincide. 
-            The hash is used as a part of the state to check for changes, and we need to detect changes 
-            in the fields of description and vulnerabilities, wich are not needed for normal comparasion
-            where we want to detect if they represent the same thing. 
-         */
+           We use the defualt implementation for hash even if the Eq implementation does not coincide.
+           The hash is used as a part of the state to check for changes, and we need to detect changes
+           in the fields of description and vulnerabilities, wich are not needed for normal comparasion
+           where we want to detect if they represent the same thing.
+        */
         self.name.hash(state);
         self.description.hash(state);
         self.version.hash(state);
@@ -195,9 +232,63 @@ impl Hash for Software {
     }
 }
 
+impl Display for Tactic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let natural_name: &str = self.get_natural_name();
+        let identifier: String = self.get_identifier();
+        write!(f, "{natural_name} ({identifier})")
+    }
+}
+
+impl Display for TTP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TTP::Name(name) => write!(f, "{name}"),
+            TTP::Tactic(tactic) => write!(f, "{}", tactic),
+            TTP::Technique(identifier) => write!(f, "T{:0>4}", identifier),
+            TTP::SubTechnique(identifier, sub_identifier) => {
+                write!(f, "T{:0>4}.{:0>3}", identifier, sub_identifier)
+            }
+        }
+    }
+}
+
+impl From<&str> for TTP {
+    fn from(value: &str) -> Self {
+        //todo!("Currently unimplemented")
+        Self::Name(value.to_string())
+    }
+}
+
+impl Tactic {
+    pub fn get_natural_name(&self) -> &str {
+        return match self {
+            Tactic::Reconnaissance => "Reconnaissance",
+            Tactic::ResourceDevelopment => "Resource development",
+            Tactic::InitialAccess => "Initial access",
+            Tactic::Execution => "Execution",
+            Tactic::Persistence => "Persistence",
+            Tactic::PrivilegeEscalation => "Privilege escalation",
+            Tactic::Stealth => "Stealth",
+            Tactic::DefenseImpairment => "Defense impairment",
+            Tactic::CredentialAccess => "Credential access",
+            Tactic::Discovery => "Discovery",
+            Tactic::LateralMovement => "Lateral movement",
+            Tactic::Collection => "Collection",
+            Tactic::CommandControl => "Command and control",
+            Tactic::Exfiltration => "Exfiltration",
+            Tactic::Impact => "Impact",
+        };
+    }
+
+    pub fn get_identifier(&self) -> String {
+        return format!("TA{:0>4}", self.clone() as isize);
+    }
+}
+
 impl Service {
     /// Invariants: name must be standardized
-    #[must_use] 
+    #[must_use]
     pub fn new(name: &str, port_: u16) -> Self {
         let std_name: String = standardize_name(name);
         return Self {
