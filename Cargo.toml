@@ -23,6 +23,7 @@ needless_return = "allow"
 assign_op_pattern = "allow"
 excessive_precision = "allow"
 to_string_trait_impl = "allow" 
+use_self = "allow"
 
 # Disallowed from restriction category
 
