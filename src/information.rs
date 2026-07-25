@@ -152,7 +152,7 @@ pub enum TTP {
     SubTechnique(u16, u8),
 }
 
-/// Obtained from: https://attack.mitre.org/tactics/enterprise/
+/// Obtained from: <https://attack.mitre.org/tactics/enterprise>/
 /// (07/2026)
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Tactic {
@@ -244,10 +244,10 @@ impl Display for TTP {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TTP::Name(name) => write!(f, "{name}"),
-            TTP::Tactic(tactic) => write!(f, "{}", tactic),
-            TTP::Technique(identifier) => write!(f, "T{:0>4}", identifier),
+            TTP::Tactic(tactic) => write!(f, "{tactic}"),
+            TTP::Technique(identifier) => write!(f, "T{identifier:0>4}"),
             TTP::SubTechnique(identifier, sub_identifier) => {
-                write!(f, "T{:0>4}.{:0>3}", identifier, sub_identifier)
+                write!(f, "T{identifier:0>4}.{sub_identifier:0>3}")
             }
         }
     }
@@ -261,7 +261,8 @@ impl From<&str> for TTP {
 }
 
 impl Tactic {
-    pub fn get_natural_name(&self) -> &str {
+    #[must_use]
+    pub const fn get_natural_name(&self) -> &str {
         return match self {
             Tactic::Reconnaissance => "Reconnaissance",
             Tactic::ResourceDevelopment => "Resource development",
@@ -281,6 +282,7 @@ impl Tactic {
         };
     }
 
+    #[must_use]
     pub fn get_identifier(&self) -> String {
         return format!("TA{:0>4}", self.clone() as isize);
     }

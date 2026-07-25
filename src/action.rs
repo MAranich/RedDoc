@@ -56,10 +56,10 @@ impl ToString for Action {
             _ => todo!("Currently not implemented. "),
         };
 
-        let string: String = if !self.ttp.is_empty() {
-            format!("Action{{{:?}, {category_str}}}", self.ttp)
-        } else {
+        let string: String = if self.ttp.is_empty() {
             format!("Action{{{category_str}}}")
+        } else {
+            format!("Action{{{:?}, {category_str}}}", self.ttp)
         };
         return string;
     }
@@ -102,7 +102,7 @@ pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
         .map(|v| TTP::from(v.as_str()))
         .collect::<Vec<TTP>>();
 
-    add_ttp_to_node(&mut new_node, ttps); 
+    add_ttp_to_node(&mut new_node, ttps);
 
     if DEBUG_MODE {
         println!("New node: \n{new_node:?}");

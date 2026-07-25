@@ -5,14 +5,13 @@
 use std::io;
 use std::io::Write;
 
-
-/// 
+///
 /// ## Panics
-/// 
+///
 /// Panics may be caused if the user sends invalid UTF-8 characters or if the
 /// `Read` method returns an error.
-/// 
-#[must_use] 
+///
+#[must_use]
 pub fn ask_bool_question(question: &str) -> bool {
     const ACCEPT_CHAR: char = 'y';
     const REJECT_CHAR: char = 'n';
@@ -53,14 +52,13 @@ pub fn ask_bool_question(question: &str) -> bool {
     return ret;
 }
 
-
-/// 
+///
 /// ## Panics
-/// 
+///
 /// Panics may be caused if the user sends invalid UTF-8 characters or if the
 /// `Read` method returns an error.
-/// 
-#[must_use] 
+///
+#[must_use]
 pub fn ask_options_question(question: &str, options: &[&str]) -> usize {
     const INSTRUCTIONS: &str =
         "Type *only* the number of the option you want or ctrl + C to terminate the program. \n";

@@ -144,7 +144,7 @@ fn handle_subcommand_computer(state: &mut State, raw_content: &ArgMatches) -> Ve
     let new_computer: Computer = Computer::new(name.as_str());
 
     /*
-    
+
     let arg_port: Vec<u16> = raw_content
         .get_many::<String>("port")
         .unwrap_or_default()
