@@ -59,6 +59,10 @@ impl Node {
             category: cat,
         };
     }
+
+    pub fn to_string(&self, state: &State) -> String {
+        format!("{:?} : {}", self.time_stamp, self.category.to_string(state))
+    }
 }
 
 impl State {
@@ -379,17 +383,13 @@ impl Timeline {
     }
 }
 
-impl ToString for Node {
-    fn to_string(&self) -> String {
-        format!("{:?} : {}", self.time_stamp, self.category.to_string())
-    }
-}
-
-impl ToString for Category {
-    fn to_string(&self) -> String {
+impl Category {
+    pub fn to_string(&self, state: &State) -> String {
         match self {
             Self::Action(action) => format!("Action {}", action.to_string()),
-            Self::Consequence(consequence) => format!("Consequence: {}", consequence.to_string()),
+            Self::Consequence(consequence) => {
+                format!("Consequence: {}", consequence.to_string(state))
+            }
             Self::Event(event) => format!("Event: {}", event.to_string()),
         }
     }

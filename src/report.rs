@@ -20,7 +20,7 @@ pub fn process_report<P: AsRef<Path>>(
         TODO: also store std input ? / or do something with it?
     */
 
-    let contents: String = time_line_to_markdown(&state.time_line);
+    let contents: String = time_line_to_markdown(state as &State);
 
     match generate_file(path, contents.as_str()) {
         Ok(()) => {
@@ -55,7 +55,7 @@ pub fn generate_file<P: AsRef<Path>>(path: P, content: &str) -> Result<(), io::E
     return Ok(());
 }
 
-fn time_line_to_markdown(time_line: &Timeline) -> String {
+fn time_line_to_markdown(state: &State) -> String {
     /*
        To print the timeline of events, we want:
        - We want to make divisions to separate the events by the day they ocurred.
@@ -63,6 +63,7 @@ fn time_line_to_markdown(time_line: &Timeline) -> String {
 
         (This could probably be better implemented)
     */
+    let time_line: &Timeline = &state.time_line; 
     let mut group_by_day: Vec<(chrono::NaiveDate, Vec<usize>)> = Vec::new();
 
     for (i, node) in time_line.0.iter().enumerate() {
@@ -112,7 +113,7 @@ fn time_line_to_markdown(time_line: &Timeline) -> String {
             aux = format!(
                 "     - {}: {}\n",
                 time.format("%H:%M"),
-                current.category.to_string()
+                current.category.to_string(state)
             );
             ret.push_str(&aux);
         }

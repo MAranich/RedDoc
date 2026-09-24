@@ -17,6 +17,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum Consequence {
     Custom(String),
     /// Output of a command and stderr
@@ -29,10 +30,10 @@ pub enum Consequence {
     // Unresolved(String)
 }
 
-impl ToString for Consequence {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Custom(content) => {
+impl Consequence {
+    pub fn to_string(&self, state: &State) -> String {
+        return match self {
+            Consequence::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
@@ -50,10 +51,40 @@ impl ToString for Consequence {
                     &curated[..i]
                 });
 
+                
                 format!("custom: {curated}{clamped}")
             }
-            _ => todo!("Currently not implemented. "),
-        }
+            Consequence::Command(command, result) => {
+                let command: &str = command.trim();
+                let result: &str = result.trim();
+
+                format!("`{command}`: {result}")
+            }
+            Consequence::NewInformation(info_ref) => {
+                let idx: usize = info_ref.index;
+                match info_ref.class {
+                    InfoClass::Computer => format!("{:?}", state.information.computers.get(idx).expect("Consequence stringification error (computer not found). ")),
+                    InfoClass::IP => format!("IP: {}", state.information.ips.get(idx).map(|ip| ip.to_string()).unwrap_or(String::from("[Error]"))),
+                    InfoClass::Software => format!("{:?}", state.information.software.get(idx).expect("Consequence stringification error (software not found). ")),
+                    InfoClass::Vulnerability => todo!("Not implemented yet. "),
+                    InfoClass::Service => format!("{:?}", state.information.services.get(idx).expect("Consequence stringification error (service not found). ")),
+                    InfoClass::Domain => format!("{:?}", state.information.domains.get(idx).expect("Consequence stringification error (domain not found). ")),
+                    InfoClass::User => format!("{:?}", state.information.users.get(idx).expect("Consequence stringification error (user not found). ")),
+                    InfoClass::Fact => format!(
+                        "Assertion: {}",
+                        state
+                            .information
+                            .facts
+                            .get(idx)
+                            .map(|s: &String| s.as_str())
+                            .unwrap_or("[ERROR]")
+                    ),
+                }
+            }
+            Consequence::Detection => todo!(),
+            Consequence::None => String::from("None"),
+            //_ => todo!("Currently not implemented. "),
+        }; 
     }
 }
 

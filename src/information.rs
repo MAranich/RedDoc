@@ -23,6 +23,7 @@ pub struct Information {
 
 /// Helper enum for [`InfoRef`] that indicates what kind of information it is.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum InfoClass {
     Computer,
     IP,
