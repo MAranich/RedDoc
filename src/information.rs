@@ -228,7 +228,7 @@ impl Software {
 }
 
 impl Vulnerability {
-    /// Creates a [VulnerabilityBuilder] with the mandatory fields filled.
+    /// Creates a [`VulnerabilityBuilder`] with the mandatory fields filled.
     ///
     /// Example:
     /// ```rust ignore
@@ -242,7 +242,12 @@ impl Vulnerability {
     ///     .build()
     ///     .expect("Everything is valid. ");
     /// ```
-    pub fn new() -> VulnerabilityBuilder {
+    #[must_use]
+    #[expect(
+        clippy::new_ret_no_self,
+        reason = "Does not return Self but a builder of Self. "
+    )]
+    pub const fn new() -> VulnerabilityBuilder {
         return VulnerabilityBuilder {
             description: String::new(),
             location: String::new(),
@@ -260,7 +265,8 @@ impl VulnerabilityBuilder {
     /// build the Vulnerability with the provided data.
     ///
     /// Reurns None if the description or severity rating are missing. Also,
-    /// severity_rating <= 1000
+    /// `severity_rating` <= 1000
+    #[must_use]
     pub fn build(self) -> Vulnerability {
         return Vulnerability {
             description: self.description,
@@ -274,7 +280,8 @@ impl VulnerabilityBuilder {
         };
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         return self.cve.is_empty()
             && self.description.is_empty()
             && self.exploit.is_empty()
@@ -285,41 +292,55 @@ impl VulnerabilityBuilder {
             && self.severity_rating.is_none();
     }
 
+    #[must_use]
     pub fn description(mut self, description_: String) -> VulnerabilityBuilder {
         self.description = description_;
         return self;
     }
 
+    #[must_use]
+    #[expect(clippy::cast_sign_loss, reason = "The value is always non-negative. ")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "The truncation is intended. "
+    )]
     pub fn severity_rating(mut self, severity_rating_: f32) -> VulnerabilityBuilder {
-        self.severity_rating = Some((severity_rating_.clamp(0.0, 10.0) * 1000.0) as u16);
+        let aux: f32 = severity_rating_.clamp(0.0, 10.0) * 1000.0;
+        self.severity_rating = Some(aux as u16);
         return self;
     }
 
+    #[must_use]
     pub fn location(mut self, location_: String) -> VulnerabilityBuilder {
         self.location = location_;
         return self;
     }
 
+    #[must_use]
     pub fn recommendation(mut self, recommendation_: String) -> VulnerabilityBuilder {
         self.recommendation = recommendation_;
         return self;
     }
 
+    #[must_use]
     pub fn exploit(mut self, exploit_: String) -> VulnerabilityBuilder {
         self.exploit = exploit_;
         return self;
     }
 
+    #[must_use]
     pub fn risk_analysis(mut self, risk_analysis_: String) -> VulnerabilityBuilder {
         self.risk_analysis = risk_analysis_;
         return self;
     }
 
+    #[must_use]
     pub fn cve(mut self, cve_: String) -> VulnerabilityBuilder {
         self.cve = cve_;
         return self;
     }
 
+    #[must_use]
     pub fn known_vunlerable_versions(
         mut self,
         known_vunlerable_versions_: Vec<String>,

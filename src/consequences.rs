@@ -31,6 +31,13 @@ pub enum Consequence {
 }
 
 impl Consequence {
+    /// Turns the state into a string.
+    ///
+    /// # Panics
+    ///  - If the state is inconsistent (indexes point to non-existent locations)
+    ///
+    ///
+    #[must_use]
     pub fn to_string(&self, state: &State) -> String {
         return match self {
             Consequence::Custom(content) => {
@@ -72,12 +79,10 @@ impl Consequence {
                     ),
                     InfoClass::IP => format!(
                         "IP: {}",
-                        state
-                            .information
-                            .ips
-                            .get(idx)
-                            .map(|ip| ip.to_string())
-                            .unwrap_or(String::from("[Error]"))
+                        state.information.ips.get(idx).map_or_else(
+                            || String::from("[Error]"),
+                            std::string::ToString::to_string
+                        )
                     ),
                     InfoClass::Software => format!(
                         "{:?}",
@@ -118,8 +123,7 @@ impl Consequence {
                             .information
                             .facts
                             .get(idx)
-                            .map(|s: &String| s.as_str())
-                            .unwrap_or("[ERROR]")
+                            .map_or("[ERROR]", |s: &String| s.as_str())
                     ),
                 }
             }
@@ -469,9 +473,12 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
     return ret;
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Fragmenting the function into multiple ones would make the code harder to read. "
+)]
 fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {
-
-    // Possible improvements, if in write mode, add any data found in the flags as default awnsers. 
+    // Possible improvements, if in write mode, add any data found in the flags as default awnsers.
 
     let write_flag: bool = *raw_content.get_one::<bool>("write").unwrap_or(&false);
     let mut vuln_builder: crate::information::VulnerabilityBuilder = Vulnerability::new();
@@ -498,49 +505,39 @@ fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) 
                 // let cvss_str: &str = vec[2].as_str();
                 cvss_str = vec[2].clone();
 
-                vuln_builder = vuln_builder
-                    .description(
-                        vec[0].clone()
-                    )
-                    .location(
-                        vec[1].clone()
-                    )
-                    .recommendation(
-                        vec[3].clone()
-                    )
-                    .exploit(
-                        vec[4].clone()
-                    )
-                    .risk_analysis(
-                        vec[5].clone()
-                    )
-                    .cve(
-                        vec[6].clone()
-                    )
-                    .known_vunlerable_versions(
-                        match serde_json::from_str(&vec[7]) { // .parse::<Vec<String>>()
-                            Ok(v) => v,
-                            Err(e) => {
-                                eprintln!(
-                                "\n\nERROR: Invalid format for the vulnerable versions. Correct example: \
-                                [\"1.0.1\", \"1.5.*\", \"All versions that start with 3 or 4. \"] \n\
-                                Do not forget the quotes ( [1.0] is invalid, use [\"1.0\"] ). If \
-                                you wich to leave it empty, use [] . \n\
-                                Original_string: {}\n\
-                                Parsing error: \
-                                \n {e:?}\n", vec[7]
-                            ); 
+                let vuln_versions: Vec<String> = match serde_json::from_str(&vec[7]) {
+                    // .parse::<Vec<String>>()
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!(
+                            "\n\nERROR: Invalid format for the vulnerable versions. Correct example: \
+                            [\"1.0.1\", \"1.5.*\", \"All versions that start with 3 or 4. \"] \n\
+                            Do not forget the quotes ( [1.0] is invalid, use [\"1.0\"] ). If \
+                            you wich to leave it empty, use [] . \n\
+                            Original_string: {}\n\
+                            Parsing error: \
+                            \n {e:?}\n",
+                            vec[7]
+                        );
                         return vec![];
-                    },
-                        },
-                    );
+                    }
+                };
+
+                vuln_builder = vuln_builder
+                    .description(vec[0].clone())
+                    .location(vec[1].clone())
+                    .recommendation(vec[3].clone())
+                    .exploit(vec[4].clone())
+                    .risk_analysis(vec[5].clone())
+                    .cve(vec[6].clone())
+                    .known_vunlerable_versions(vuln_versions);
             }
             Err(e) => {
                 eprintln!(
                     "\n\nERROR: There has been an error while trying to use the write to a file functionality. \n\tError message: \n{e:?}"
-                ); 
-                return vec![]; 
-            },
+                );
+                return vec![];
+            }
         }
     } else {
         cvss_str = raw_content
@@ -593,8 +590,8 @@ fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) 
             );
     }
 
-    let mut severity_rating_opt: Option<f32> = cvss_label_to_num(&cvss_str); 
-        
+    let mut severity_rating_opt: Option<f32> = cvss_label_to_num(&cvss_str);
+
     if severity_rating_opt.is_none() && !cvss_str.is_empty() {
         severity_rating_opt = match cvss_str.parse::<f32>() {
             Ok(severity_rating) => Some(severity_rating),
@@ -607,7 +604,7 @@ fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) 
                 );
                 return vec![];
             }
-        }; 
+        };
     }
 
     if let Some(severity_rating) = severity_rating_opt {
@@ -615,16 +612,17 @@ fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) 
     }
 
     if vuln_builder.is_empty() {
-        eprintln!("WARNING: You have not written anything. "); 
-        return vec![]; 
+        eprintln!("WARNING: You have not written anything. ");
+        return vec![];
     }
-
 
     let vuln: Vulnerability = vuln_builder.build();
 
-    let id: usize = match state.add_vulnerability(vuln) {
-        Some(_id) => _id,
-        None => panic!("WARNING: "),
+    let id: usize = if let Some(id_) = state.add_vulnerability(vuln) {
+        id_
+    } else {
+        eprintln!("WARNING: Vulnerability with the exact same contents already exists. ");
+        return vec![];
     };
 
     let new_node: Node = Node::new(Category::Consequence(Consequence::NewInformation(
@@ -968,8 +966,7 @@ fn cvss_label_to_num(label: &str) -> Option<f32> {
         Some('h' | 'H') => (7.0, 8.0, 9.0),
         Some('m' | 'M') => (4.0, 5.50, 7.0),
         Some('l' | 'L') => (0.0, 2.0, 4.0),
-        Some(_) => return None,
-        None => return None,
+        Some(_) | None => return None,
     };
 
     let re: Regex = Regex::new(r"(\+|-)+").expect("Regex to be valid (cvss_label_to_num)");
@@ -977,23 +974,19 @@ fn cvss_label_to_num(label: &str) -> Option<f32> {
     let mut final_score: f32 = base_score;
     let mut step: f32 = (next - base_score) * 0.5;
 
-    match re.find(label) {
-        Some(matches) => {
-            for c in matches.as_str().chars().take(MAX_MODIFIERS) {
-                match c {
-                    '+' => final_score += step,
-                    '-' => final_score += -step,
-                    _ => {
-                        // this should be unreachable
-                        eprintln!("Warning: unexpected char found in cvss_label_to_num");
-                    }
+    if let Some(matches) = re.find(label) {
+        for c in matches.as_str().chars().take(MAX_MODIFIERS) {
+            match c {
+                '+' => final_score += step,
+                '-' => final_score += -step,
+                _ => {
+                    // this should be unreachable
+                    eprintln!("Warning: unexpected char found in cvss_label_to_num");
                 }
-                step = step * 0.5;
             }
+            step = step * 0.5;
         }
-        None => {}
-    };
-
+    }
 
     return Some(final_score.clamp(0.0, 10.0));
 }
@@ -1024,7 +1017,10 @@ mod tests {
         ];
 
         aux.iter().for_each(|(label, expected_score)| {
-            assert_eq!(cvss_label_to_num(label).map(|s| (100.0 * s) as u16), *expected_score)
+            assert_eq!(
+                cvss_label_to_num(label).map(|s| (100.0 * s) as u16),
+                *expected_score
+            )
         });
     }
 }

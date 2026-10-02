@@ -60,6 +60,7 @@ impl Node {
         };
     }
 
+    #[must_use]
     pub fn to_string(&self, state: &State) -> String {
         format!("{:?} : {}", self.time_stamp, self.category.to_string(state))
     }
@@ -384,6 +385,7 @@ impl Timeline {
 }
 
 impl Category {
+    #[must_use]
     pub fn to_string(&self, state: &State) -> String {
         match self {
             Self::Action(action) => format!("Action {}", action.to_string()),

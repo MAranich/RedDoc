@@ -117,11 +117,16 @@ const HELP_MESSGE: &str = "// Write in a newline after the line what value do yo
 // 
 // You can leave your awnser empty if needed. ";
 
-/*
-- For nested multi line comments have the largest comment work (unlike normal C): "a/*b/*c*/
-d*/e" -> "ae"
-*/
-
+/// A wrapper fo [`ask_write_text_temporal`]. Ask the user some questions and
+/// let the user write in a teporary file and collect the result.
+///
+/// ## Errors
+///  - Returns error if there was a problem with file operations.
+///
+/// ## Panics
+///  - When the text editor process returned an error.
+///  - When it is not possible to read the awnser in the file.
+///
 pub fn handler_write_user(questions: &[&str]) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let n_questions: usize = questions.len();
 
@@ -133,8 +138,8 @@ pub fn handler_write_user(questions: &[&str]) -> Result<Vec<String>, Box<dyn std
         let mut hasher: DefaultHasher = DefaultHasher::new();
         question.hash(&mut hasher);
         // 32 bits for our usecase is more than enough
-        let hash: u64 = hasher.finish() >> 32; 
-        let hash_str: String = format!("{:x}", hash);
+        let hash: u64 = hasher.finish() >> 32;
+        let hash_str: String = format!("{hash:x}");
         let aux: String = format!("\n[{hash_str}] {question} \n\n\n\n[{hash_str}]");
         initial_content.push_str(&aux);
         question_hashes.push(hash_str);
@@ -155,13 +160,22 @@ pub fn handler_write_user(questions: &[&str]) -> Result<Vec<String>, Box<dyn std
             "You may have removed the markers and the file was not parsed correcly. Aborting. ",
         );
 
-        let awnser: String = (&cap["awnser"]).trim().to_string();
+        let awnser: String = cap["awnser"].trim().to_string();
         ret.push(awnser);
     }
 
     return Ok(ret);
 }
 
+/// Let the user write in a teporary file and collect the result.
+///
+/// ## Errors
+///  - Returns error if there was a problem with file operations.
+///
+/// ## Panics
+///  - When the text editor process returned an error.
+///  - When it is not possible to read the awnser in the file.
+///
 pub fn ask_write_text_temporal(
     initial_content: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
@@ -204,9 +218,10 @@ pub fn ask_write_text_temporal(
 
     // ////////////////////////////////////////////////////////////////////////
 
-    if !status.success() {
-        panic!("ERROR: Nano terminated with an error status: {}", status);
-    }
+    assert!(
+        status.success(),
+        "ERROR: Nano terminated with an error status: {status}"
+    );
 
     let updated_text: String = match fs::read_to_string(&file_path) {
         Ok(s) => s,
@@ -263,12 +278,10 @@ fn remove_c_multi_comments(input: &str) -> String {
     let mut is_prev_slash: bool = false;
     let mut is_prev_star: bool = false;
     let mut nesting_lvl: u32 = 0;
-    const STAR: char = '*';
-    const SLASH: char = '/';
 
     for c in input.chars() {
-        let is_slash: bool = c == SLASH;
-        let is_star: bool = c == STAR;
+        let is_slash: bool = c == '/';
+        let is_star: bool = c == '*';
         if is_prev_slash && is_star {
             // new nested comment
             if nesting_lvl == 0 {
