@@ -10,9 +10,9 @@ use crate::{
     CONSEQUENCE_INFO_HONEYPOT, CONSEQUENCE_INFO_IP, CONSEQUENCE_INFO_SERVICE,
     CONSEQUENCE_INFO_SOFTWARE, CONSEQUENCE_INFO_VIRTUAL_MACHINE, CONSEQUENCE_INFO_VULNERABILITY,
     DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
-    information::{Computer, InfoClass, InfoRef, Service, Software},
+    information::{Computer, InfoClass, InfoRef, Service, Software, Vulnerability},
     node::{Category, Node, State},
-    questions::{ask_bool_question, ask_options_question},
+    questions::{self, ask_bool_question, ask_options_question},
     standardize_name,
 };
 
@@ -51,7 +51,6 @@ impl Consequence {
                     &curated[..i]
                 });
 
-                
                 format!("custom: {curated}{clamped}")
             }
             Consequence::Command(command, result) => {
@@ -63,13 +62,56 @@ impl Consequence {
             Consequence::NewInformation(info_ref) => {
                 let idx: usize = info_ref.index;
                 match info_ref.class {
-                    InfoClass::Computer => format!("{:?}", state.information.computers.get(idx).expect("Consequence stringification error (computer not found). ")),
-                    InfoClass::IP => format!("IP: {}", state.information.ips.get(idx).map(|ip| ip.to_string()).unwrap_or(String::from("[Error]"))),
-                    InfoClass::Software => format!("{:?}", state.information.software.get(idx).expect("Consequence stringification error (software not found). ")),
+                    InfoClass::Computer => format!(
+                        "{:?}",
+                        state
+                            .information
+                            .computers
+                            .get(idx)
+                            .expect("Consequence stringification error (computer not found). ")
+                    ),
+                    InfoClass::IP => format!(
+                        "IP: {}",
+                        state
+                            .information
+                            .ips
+                            .get(idx)
+                            .map(|ip| ip.to_string())
+                            .unwrap_or(String::from("[Error]"))
+                    ),
+                    InfoClass::Software => format!(
+                        "{:?}",
+                        state
+                            .information
+                            .software
+                            .get(idx)
+                            .expect("Consequence stringification error (software not found). ")
+                    ),
                     InfoClass::Vulnerability => todo!("Not implemented yet. "),
-                    InfoClass::Service => format!("{:?}", state.information.services.get(idx).expect("Consequence stringification error (service not found). ")),
-                    InfoClass::Domain => format!("{:?}", state.information.domains.get(idx).expect("Consequence stringification error (domain not found). ")),
-                    InfoClass::User => format!("{:?}", state.information.users.get(idx).expect("Consequence stringification error (user not found). ")),
+                    InfoClass::Service => format!(
+                        "{:?}",
+                        state
+                            .information
+                            .services
+                            .get(idx)
+                            .expect("Consequence stringification error (service not found). ")
+                    ),
+                    InfoClass::Domain => format!(
+                        "{:?}",
+                        state
+                            .information
+                            .domains
+                            .get(idx)
+                            .expect("Consequence stringification error (domain not found). ")
+                    ),
+                    InfoClass::User => format!(
+                        "{:?}",
+                        state
+                            .information
+                            .users
+                            .get(idx)
+                            .expect("Consequence stringification error (user not found). ")
+                    ),
                     InfoClass::Fact => format!(
                         "Assertion: {}",
                         state
@@ -84,7 +126,7 @@ impl Consequence {
             Consequence::Detection => todo!(),
             Consequence::None => String::from("None"),
             //_ => todo!("Currently not implemented. "),
-        }; 
+        };
     }
 }
 
@@ -115,7 +157,9 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
             handle_subcommand_service(state, raw_content)
         }
         Some((CONSEQUENCE_INFO_DOMAIN, _raw_content)) => todo!(),
-        Some((CONSEQUENCE_INFO_VULNERABILITY, _raw_content)) => todo!(),
+        Some((CONSEQUENCE_INFO_VULNERABILITY, raw_content)) => {
+            handle_subcommand_vulnerability(state, raw_content)
+        }
         Some((CONSEQUENCE_INFO_FIREWALL, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_FILE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_HONEYPOT, _raw_content)) => todo!(),
@@ -423,6 +467,174 @@ fn handle_subcommand_service(state: &mut State, raw_content: &ArgMatches) -> Vec
     }
 
     return ret;
+}
+
+fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) -> Vec<Node> {
+
+    // Possible improvements, if in write mode, add any data found in the flags as default awnsers. 
+
+    let write_flag: bool = *raw_content.get_one::<bool>("write").unwrap_or(&false);
+    let mut vuln_builder: crate::information::VulnerabilityBuilder = Vulnerability::new();
+    let cvss_str: String;
+
+    if write_flag {
+        let argument_names: [&str; 8] = [
+            "/* Description of the vulnerability */",
+            "/* Location */",
+            "/* Severity rating (CVSS), insert only the number (0.0 - 10.0) */",
+            "/* Reccomendations */",
+            "/* Proof of consept or steps to replicate */",
+            "/* Risk analysis */",
+            "/* CVE identifier (in the form \"CVE-0000-12345\") */",
+            "/* Affected versions (fill the array or leave empty; ex: [\"1.0\", \"1.5\", \
+            \"All versions that start with  3 or 4. \"])*/ \n\n    []",
+        ];
+        let response: Result<Vec<String>, Box<dyn std::error::Error>> =
+            questions::handler_write_user(&argument_names);
+
+        match response {
+            Ok(vec) => {
+                // SAFETY: safe because the index matches the severity rating string in argument names
+                // let cvss_str: &str = vec[2].as_str();
+                cvss_str = vec[2].clone();
+
+                vuln_builder = vuln_builder
+                    .description(
+                        vec[0].clone()
+                    )
+                    .location(
+                        vec[1].clone()
+                    )
+                    .recommendation(
+                        vec[3].clone()
+                    )
+                    .exploit(
+                        vec[4].clone()
+                    )
+                    .risk_analysis(
+                        vec[5].clone()
+                    )
+                    .cve(
+                        vec[6].clone()
+                    )
+                    .known_vunlerable_versions(
+                        match serde_json::from_str(&vec[7]) { // .parse::<Vec<String>>()
+                            Ok(v) => v,
+                            Err(e) => {
+                                eprintln!(
+                                "\n\nERROR: Invalid format for the vulnerable versions. Correct example: \
+                                [\"1.0.1\", \"1.5.*\", \"All versions that start with 3 or 4. \"] \n\
+                                Do not forget the quotes ( [1.0] is invalid, use [\"1.0\"] ). If \
+                                you wich to leave it empty, use [] . \n\
+                                Original_string: {}\n\
+                                Parsing error: \
+                                \n {e:?}\n", vec[7]
+                            ); 
+                        return vec![];
+                    },
+                        },
+                    );
+            }
+            Err(e) => {
+                eprintln!(
+                    "\n\nERROR: There has been an error while trying to use the write to a file functionality. \n\tError message: \n{e:?}"
+                ); 
+                return vec![]; 
+            },
+        }
+    } else {
+        cvss_str = raw_content
+            .get_one::<String>("severity_rating")
+            .cloned()
+            .unwrap_or_default();
+
+        vuln_builder = vuln_builder
+            .description(
+                raw_content
+                    .get_one::<String>("vulnerability_description")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .location(
+                raw_content
+                    .get_one::<String>("location")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .recommendation(
+                raw_content
+                    .get_one::<String>("recommendation")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .exploit(
+                raw_content
+                    .get_one::<String>("proof_of_concept")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .risk_analysis(
+                raw_content
+                    .get_one::<String>("risk_analysis")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .cve(
+                raw_content
+                    .get_one::<String>("cve")
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+            .known_vunlerable_versions(
+                raw_content
+                    .get_one::<Vec<String>>("affected_versions")
+                    .cloned()
+                    .unwrap_or_default(),
+            );
+    }
+
+    let mut severity_rating_opt: Option<f32> = cvss_label_to_num(&cvss_str); 
+        
+    if severity_rating_opt.is_none() && !cvss_str.is_empty() {
+        severity_rating_opt = match cvss_str.parse::<f32>() {
+            Ok(severity_rating) => Some(severity_rating),
+            Err(e) => {
+                eprintln!(
+                    "\n\nERROR: Invalid sequence inserted in the section Severity rating (CVSS). \
+                    Insert only the number between 0 an 10. Original_string: {cvss_str}\
+                    Parsing error: \
+                    \n {e:?}"
+                );
+                return vec![];
+            }
+        }; 
+    }
+
+    if let Some(severity_rating) = severity_rating_opt {
+        vuln_builder = vuln_builder.severity_rating(severity_rating);
+    }
+
+    if vuln_builder.is_empty() {
+        eprintln!("WARNING: You have not written anything. "); 
+        return vec![]; 
+    }
+
+
+    let vuln: Vulnerability = vuln_builder.build();
+
+    let id: usize = match state.add_vulnerability(vuln) {
+        Some(_id) => _id,
+        None => panic!("WARNING: "),
+    };
+
+    let new_node: Node = Node::new(Category::Consequence(Consequence::NewInformation(
+        InfoRef {
+            index: id,
+            class: InfoClass::Vulnerability,
+        },
+    )));
+
+    return vec![new_node];
 }
 
 fn service_get_software(
@@ -743,5 +955,76 @@ fn add_software_to_computers(
                 computer.software.push(selected_id);
             }
         }
+    }
+}
+
+fn cvss_label_to_num(label: &str) -> Option<f32> {
+    // 8 = ceil(log2(200)) ; 200 is the maximim difference of (next-prev)/2.
+    // Using more than 8 would be useless.
+    const MAX_MODIFIERS: usize = 8;
+
+    let (_prev, base_score, next): (f32, f32, f32) = match label.chars().next() {
+        Some('c' | 'C') => (9.0, 9.50, 10.0),
+        Some('h' | 'H') => (7.0, 8.0, 9.0),
+        Some('m' | 'M') => (4.0, 5.50, 7.0),
+        Some('l' | 'L') => (0.0, 2.0, 4.0),
+        Some(_) => return None,
+        None => return None,
+    };
+
+    let re: Regex = Regex::new(r"(\+|-)+").expect("Regex to be valid (cvss_label_to_num)");
+
+    let mut final_score: f32 = base_score;
+    let mut step: f32 = (next - base_score) * 0.5;
+
+    match re.find(label) {
+        Some(matches) => {
+            for c in matches.as_str().chars().take(MAX_MODIFIERS) {
+                match c {
+                    '+' => final_score += step,
+                    '-' => final_score += -step,
+                    _ => {
+                        // this should be unreachable
+                        eprintln!("Warning: unexpected char found in cvss_label_to_num");
+                    }
+                }
+                step = step * 0.5;
+            }
+        }
+        None => {}
+    };
+
+
+    return Some(final_score.clamp(0.0, 10.0));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cvss_label_to_num() {
+        let aux = [
+            ("CRITICAL", Some(950)),
+            ("high", Some(800)),
+            ("m", Some(550)),
+            ("l", Some(200)),
+            ("l+", Some(300)),
+            ("l-", Some(100)),
+            ("l-+", Some(150)),
+            ("l++++++++", Some(399)),
+            ("l+++++++++++", Some(399)),
+            ("l+++++++++-+-", Some(399)),
+            ("", None),
+            ("x", None),
+            ("W", None),
+            ("+", None),
+            ("-", None),
+            ("-++-", None),
+        ];
+
+        aux.iter().for_each(|(label, expected_score)| {
+            assert_eq!(cvss_label_to_num(label).map(|s| (100.0 * s) as u16), *expected_score)
+        });
     }
 }

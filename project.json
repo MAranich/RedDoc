@@ -91,6 +91,17 @@
                     ]
                 }
             }
+        },
+        {
+            "time_stamp": "2026-10-02T15:56:13.844895650Z",
+            "category": {
+                "Consequence": {
+                    "NewInformation": {
+                        "index": 0,
+                        "class": "Vulnerability"
+                    }
+                }
+            }
         }
     ],
     "information": {
@@ -136,7 +147,20 @@
                 "software": null
             }
         ],
-        "vulnerabilities": [],
+        "vulnerabilities": [
+            {
+                "description": "Unauthenticated RCE",
+                "location": "Everywhere",
+                "severity_rating": 1000,
+                "recommendation": "Rewrite in Rust.",
+                "exploit": "1. Open the application. \n2. Suffer",
+                "risk_analysis": "Everything is bad :(",
+                "cve": "CVE-4026-123456",
+                "known_vunlerable_versions": [
+                    "From 0.1 to the actual version. "
+                ]
+            }
+        ],
         "domains": [],
         "users": [],
         "facts": []

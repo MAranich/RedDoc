@@ -95,13 +95,32 @@ pub struct Software {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Vulnerability {
-    pub cve: String,
     pub description: String,
-    /// severity can go from [0, 1 000] and represent numbers from [0.0, 10.0] with 2 digits of acuracy.
-    pub severity: Option<i16>,
-    /// (optinal), code used to exploit this vulnerability
+    /// Where the vulnerability was found (URL, file, menu).
+    pub location: String,
+    /// `severity` can go from [0, 1 000] and represent numbers from [0.0, 10.0] with 2 digits of acuracy.
+    /// User should introduce values according to CVSS.
+    pub severity_rating: Option<u16>,
+    /// Proposed solution or steps to remediate the problem.
+    pub recommendation: String,
+    /// (optinal) program to exploit the vulnerability or steps to reproduce.
     pub exploit: String,
+    /// An assessment of the potential impact if the vulnerability were exploited in a real-world scenario.
+    pub risk_analysis: String,
+    /// The CVE identifier to the vulnerability.
+    pub cve: String,
     pub known_vunlerable_versions: Vec<String>,
+}
+
+pub struct VulnerabilityBuilder {
+    description: String,
+    location: String,
+    severity_rating: Option<u16>,
+    recommendation: String,
+    exploit: String,
+    risk_analysis: String,
+    cve: String,
+    known_vunlerable_versions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -205,6 +224,108 @@ impl Software {
             version: std_version,
             vulnerabilities: Vec::new(),
         }
+    }
+}
+
+impl Vulnerability {
+    /// Creates a [VulnerabilityBuilder] with the mandatory fields filled.
+    ///
+    /// Example:
+    /// ```rust ignore
+    /// use red_doc::information::*;
+    ///
+    /// let new_vuln: Vulnerability = Vulnerability::new("Unauthenticated root RCE. ".to_string(), 1000)
+    ///     .recommendation("Update. ".to_string())
+    ///     .risk_analysis("Everitying is terrible! ".to_string())
+    ///     .cve("CVE-0000-12345".to_string())
+    ///     .location("Main menu".to_string())
+    ///     .build()
+    ///     .expect("Everything is valid. ");
+    /// ```
+    pub fn new() -> VulnerabilityBuilder {
+        return VulnerabilityBuilder {
+            description: String::new(),
+            location: String::new(),
+            severity_rating: None,
+            recommendation: String::new(),
+            exploit: String::new(),
+            risk_analysis: String::new(),
+            cve: String::new(),
+            known_vunlerable_versions: Vec::new(),
+        };
+    }
+}
+
+impl VulnerabilityBuilder {
+    /// build the Vulnerability with the provided data.
+    ///
+    /// Reurns None if the description or severity rating are missing. Also,
+    /// severity_rating <= 1000
+    pub fn build(self) -> Vulnerability {
+        return Vulnerability {
+            description: self.description,
+            location: self.location,
+            severity_rating: self.severity_rating.map(|x: u16| x.min(1000)),
+            recommendation: self.recommendation,
+            exploit: self.exploit,
+            risk_analysis: self.risk_analysis,
+            cve: self.cve,
+            known_vunlerable_versions: self.known_vunlerable_versions,
+        };
+    }
+
+    pub fn is_empty(&self) -> bool {
+        return self.cve.is_empty()
+            && self.description.is_empty()
+            && self.exploit.is_empty()
+            && self.known_vunlerable_versions.is_empty()
+            && self.location.is_empty()
+            && self.recommendation.is_empty()
+            && self.risk_analysis.is_empty()
+            && self.severity_rating.is_none();
+    }
+
+    pub fn description(mut self, description_: String) -> VulnerabilityBuilder {
+        self.description = description_;
+        return self;
+    }
+
+    pub fn severity_rating(mut self, severity_rating_: f32) -> VulnerabilityBuilder {
+        self.severity_rating = Some((severity_rating_.clamp(0.0, 10.0) * 1000.0) as u16);
+        return self;
+    }
+
+    pub fn location(mut self, location_: String) -> VulnerabilityBuilder {
+        self.location = location_;
+        return self;
+    }
+
+    pub fn recommendation(mut self, recommendation_: String) -> VulnerabilityBuilder {
+        self.recommendation = recommendation_;
+        return self;
+    }
+
+    pub fn exploit(mut self, exploit_: String) -> VulnerabilityBuilder {
+        self.exploit = exploit_;
+        return self;
+    }
+
+    pub fn risk_analysis(mut self, risk_analysis_: String) -> VulnerabilityBuilder {
+        self.risk_analysis = risk_analysis_;
+        return self;
+    }
+
+    pub fn cve(mut self, cve_: String) -> VulnerabilityBuilder {
+        self.cve = cve_;
+        return self;
+    }
+
+    pub fn known_vunlerable_versions(
+        mut self,
+        known_vunlerable_versions_: Vec<String>,
+    ) -> VulnerabilityBuilder {
+        self.known_vunlerable_versions = known_vunlerable_versions_;
+        return self;
     }
 }
 

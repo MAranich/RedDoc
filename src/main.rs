@@ -90,6 +90,39 @@ const CONSEQUENCE_INFO_HONEYPOT: &str = "honeypot";
 const CONSEQUENCE_INFO_VIRTUAL_MACHINE: &str = "virtual_machine";
 const CONSEQUENCE_INFO_CREDENTIALS: &str = "credentials";
 
+const LONG_HELP_SEVERITY_RATING: &str = 
+"Severity rating according to CVSS (Common Vulnerability Scoring System). \n\n\
+The score is a value ranging from 0 to 10, with higher values being asociated with higher \
+impact. The evaluation should consider: 
+ - Attack vector (AV: Network, Adjacent, Local, Physical)
+ - Attack complexity (AC: Low, High)
+ - Attack requierements (AT: None, Persent)
+ - Privileges requiered (PR: None, Low, High)
+ - User Interaction (UI: None, Passive, Active)
+ - On both the vulnerable system and subsequence systems, the loss of: 
+	 - Confidentiality (VC/SC: None, Low, High)
+	 - Integrity (VI/SI: None, Low, High)
+	 - Avaliability (VA/SA: None, Low, High)
+ - Supplemetal metrics (Optional): 
+	 - Safety (S: Not Defined, Present, Negligible)
+	 - Automatable (AU: Not Defined, No, Yes)
+	 - Recovery (R: Not Defined, Automatic, User, Irrecoverable)
+	 - Value Density (V: Not Defined, Diffuse, Concentrated)
+	 - Response Effort (RE: Not Defined, Low, Moderate, High)
+	 - Provider Urgency (U: Not Defined, Clear, Green, Amber, Red)
+
+Useful resources: [CVSS Calculator](https://cve.tools/cvss?vector=CVSS:4.0), \
+[Specification Document of CVSS](https://www.first.org/cvss/specification-document). 
+
+Aside from numerical values, you can introduce the following labels for predefined values: 
+ - \"LOW\": \t2.0
+ - \"MEDIUM\": \t5.5
+ - \"HIGH\": \t8.0
+ - \"CRITICAL\": \t9.5 
+You can optionally add (multiple) '+' or '-' signs to further ajust the value. For example \"MEDIUM+\" = 6.75. 
+These labels can be used as quick way to give an estimate value to the vulnerability. 
+"; 
+
 // Sub commands for events: **********************************************
 const EVENT_CUSTOM: &str = "custom";
 const EVENT_CUSTOM_ABOUT: &str =
@@ -180,15 +213,10 @@ fn main() {
 
     let ttp_option: Arg = Arg::new("ttp")
         .global(true)
-        .long("tactics_techniques_procedures")
+        .long("ttp")
         .required(false)
         .action(ArgAction::Append)
-        .alias("ttp")
-        .alias("tactic")
-        .alias("technique")
-        .alias("procedure")
-        .alias("ttp_category")
-        .alias("ttp_cat")
+        .aliases(["tactic", "technique", "procedure", "ttp_category", "ttp_cat", "tactics_techniques_procedures"])
         .long_help("TTPs (tactics, techniques and procedures) are strategies used by attackers to obtain an advantage and advance on their objectives. \
         RedDoc uses the ma matrix as the base of all possible TTPs. See https://attack.mitre.org/ for more information. \n\n\
         There are multiple categories 
@@ -214,18 +242,19 @@ fn main() {
                 .alias("cons")
                 .subcommand(
                     Command::new(CONSEQUENCE_CUSTOM)
+                        .about(CONSEQUENCE_CUSTOM_ABOUT)
                         .arg(Arg::new("content").required(true))
-                        .about(CONSEQUENCE_CUSTOM_ABOUT),
                     ).subcommand(
                         Command::new(CONSEQUENCE_INFO_COMPUTER)
+                        .about("Intregrate the existance of a new computer into the model. \nThis is stating that a given computer exists. The argument is a name/tag you give to it. `red_doc cons computer objectie_42`")
                         .arg(Arg::new("name"))
                         .arg(Arg::new("ip").help("An ipv4 or ipv6 ip adress. Can be used multiple times. "))
                         //.arg(Arg::new("port").help("An open port. Can be used multiple times. "))
                         .arg(Arg::new("os").alias("operating_system").help("The name of the operating system. Must be previusly declared as software. "))
-                        .about("Intregrate the existance of a new computer into the model. \nThis is stating that a given computer exists. The argument is a name/tag you give to it. `red_doc cons computer objectie_42`"),
                 )
                 .subcommand(
                     Command::new(CONSEQUENCE_INFO_IP)
+                        .about("Relate the provided IP to a computer. ")
                         .arg(
                             Arg::new("ip_dir")
                             .help("One or many IP directions. Can be either IPv4 or IPv6. ")
@@ -235,7 +264,7 @@ fn main() {
                             Arg::new("computer")
                             .help("The name of the computer. (must already exist)")
                             .required(true)
-                        ).about("Relate the provided IP to a computer. "),
+                        ),
                 )
                 /* 
                 .subcommand(Command::new(CONSEQUENCE_INFO_PORT)
@@ -246,6 +275,7 @@ fn main() {
                 .subcommand(
                     Command::new(CONSEQUENCE_INFO_SOFTWARE)
                         .arg(Arg::new("name").required(true))
+                        .about("Assert that a certain computer has some software. ")
                         .arg(
                             Arg::new("computer_name")
                             .required(false)
@@ -262,10 +292,11 @@ fn main() {
                                 .long("version")
                                 .aliases(["vers", "ver"])
                                 .help("The version of the software. ")
-                        ).about("Assert that a certain computer has some software. "),
+                        ),
                 )
                 .subcommand(
                 Command::new(CONSEQUENCE_INFO_SERVICE)
+                        .about("State that some software is offered as a service in a computer. ")
                         .arg(
                             Arg::new("name")
                             .required(true)
@@ -290,7 +321,70 @@ fn main() {
                             .long("regex")
                             .action(ArgAction::SetTrue)
                             .help("Treat \"computer_name\" as a regex expression and state theat the service is offered by all computers with a name that matches the regex. ")
-                        ).about("State that some software is offered as a service in a computer. "),
+                        ),
+                )
+                .subcommand(
+                    Command::new(CONSEQUENCE_INFO_VULNERABILITY)
+                    .aliases(["vuln", "vul", "Vulnerability", "Vuln", "Vul", "finding", "Finding"])
+                    .arg(
+                        Arg::new("vulnerability_description")
+                        .help("A short description of the vulnerability. ")
+                        .long("desc")
+                        .short('d')
+                        .aliases(["D", "descr", "Descr", "Desc", "Description", "summary", "Summary"])
+                        .long("description")
+                    ).arg(
+                        Arg::new("location")
+                        .help("Where the vulnerability was found (URL, file, menu)")
+                        .short('l')
+                        .long("location")
+                        .aliases(["position", "affected_asset", "asset"])
+                    ).arg(
+                        Arg::new("severity_rating")
+                        .help("Severity rating according to CVSS (Common Vulnerability Scoring System). ")
+                        .long_help(LONG_HELP_SEVERITY_RATING)
+                        .long("score")
+                        .short('s')
+                        .aliases(["CVSS", "cvss", "rating", "score", "severity"])
+                    ).arg(
+                        Arg::new("recommendation")
+                        .help("Proposed solution or steps to remediate the problem. ")
+                        .long("rec")
+                        .short('r')
+                        .aliases(["reccomendations", "suggestion", "suggestions", "sugg", "mitigation", "mitigations", "remediation", "remediation_steps", "steps_remediation"])
+                    ).arg(
+                        Arg::new("proof_of_concept")
+                        .help("Program to exploit the vulnerability or steps to reproduce. ")
+                        .long("poc")
+                        .aliases(["proof_of_concept", "steps_reproduce", "steps_replicate", "exploit"])
+                    ).arg(
+                        Arg::new("risk_analysis")
+                        .help("An assessment of the potential impact if the vulnerability were exploited in a real-world scenario.")
+                        .long("risk")
+                        .aliases(["risk_analysis"])
+                    ).arg(
+                        Arg::new("cve")
+                        .help("The CVE identifier to the vulnerability. ")
+                        .long_help("The CVE (Common Vulnerability and Exposure, cve.org) asociated to the vulnerability. It has the form \"CVE-0000-12345\". ")
+                        .long("cve")
+                        .short('c')
+                        .aliases(["CVE", "cve_id", "cve_identifier"])
+                    ).arg(
+                        Arg::new("affected_versions")
+                        .help("The versions that are affected. Multiple can be added. ")
+                        .action(ArgAction::Append)
+                        .long("vuln_ver")
+                        .short('v')
+                        .aliases(["vulnerable_versions", "vulnerable_version", "vv", "VV", "affected_version", "aff_ver"])
+                    ).arg(
+                        Arg::new("write")
+                        .help("Write each of the arguments in nano instead of the terminal. ")
+                        .short('w')
+                        .long("write")
+                        .action(ArgAction::SetTrue),
+                    )
+                    
+
                 )
         )
         .subcommand(
