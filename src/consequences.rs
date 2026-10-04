@@ -92,7 +92,23 @@ impl Consequence {
                             .get(idx)
                             .expect("Consequence stringification error (software not found). ")
                     ),
-                    InfoClass::Vulnerability => todo!("Not implemented yet. "),
+                    InfoClass::Vulnerability => {
+                        let aux: Option<&Vulnerability> =
+                            state.information.vulnerabilities.get(idx);
+                        if let Some(vuln) = aux {
+                            format!(
+                                "New vulnerability discovered: {}",
+                                vuln.description
+                                    .lines()
+                                    .next()
+                                    .unwrap_or("[Empty description]")
+                            )
+                        } else {
+                            String::from(
+                                "New vulnerability discovered: Consequence stringification error (vulnerability not found). ",
+                            )
+                        }
+                    }
                     InfoClass::Service => format!(
                         "{:?}",
                         state

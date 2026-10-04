@@ -182,7 +182,7 @@ fn main() {
     // `stdin == ""` => Nothing was piped
     let stdin_binding: String = get_stdin();
     let stdin: &str = stdin_binding.as_str();
-
+    // TODO: substitute all of this by the .raw option  in clap
     if let Some(sub_command) = raw_arguments.into_iter().nth(1) {
         let second_arg: String = sub_command.into_string().unwrap_or_default();
         let is_second_arg_command: bool = SUB_COMMAND_ALIAS.iter().any(|&s| s == second_arg);
@@ -246,7 +246,9 @@ fn main() {
                         .arg(Arg::new("content").required(true))
                     ).subcommand(
                         Command::new(CONSEQUENCE_INFO_COMPUTER)
-                        .about("Intregrate the existance of a new computer into the model. \nThis is stating that a given computer exists. The argument is a name/tag you give to it. `red_doc cons computer objectie_42`")
+                        .about("Intregrate the existance of a new computer into the model. \n\
+                        This is stating that a given computer exists. The argument is a name/tag \
+                        you give to it. \n`red_doc cons computer objectie_42`")
                         .arg(Arg::new("name"))
                         .arg(Arg::new("ip").help("An ipv4 or ipv6 ip adress. Can be used multiple times. "))
                         //.arg(Arg::new("port").help("An open port. Can be used multiple times. "))
@@ -325,6 +327,14 @@ fn main() {
                 )
                 .subcommand(
                     Command::new(CONSEQUENCE_INFO_VULNERABILITY)
+                    .about("Report a vulnerability in the studied system. Vulnerabilities allow unintended use of the software. ")
+                    .long_about("Report a vulnerability in the studied system. Vulnerabilities allow unintended use of the software. \n\n\
+                        We include fields to descrive: the vulnerability itself (description), the location, the \
+                        severity rating, the recommendations, the Proof of Concept (PoC) or steps to replicate, \
+                        the CVE identifier and the affected versions. \n\n\
+                        To avoid writing all the arguments in the terminal, you can use the flag `-w` to use a \
+                        text editor instead. 
+                    ")
                     .aliases(["vuln", "vul", "Vulnerability", "Vuln", "Vul", "finding", "Finding"])
                     .arg(
                         Arg::new("vulnerability_description")

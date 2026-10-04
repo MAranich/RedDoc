@@ -53,7 +53,11 @@ impl ToString for Action {
 
                 format!("custom: {curated}{clamped}")
             }
-            _ => todo!("Currently not implemented. "),
+            ActionCategory::Command(comm) => {
+                format!("`{comm}`")
+            },
+            ActionCategory::KnownCommnad(_known_commnad) => todo!("Printing known command currently not implemented. "),
+            // _ => todo!("Currently not implemented. "),
         };
 
         let string: String = if self.ttp.is_empty() {
