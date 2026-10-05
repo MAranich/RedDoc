@@ -972,7 +972,7 @@ fn add_software_to_computers(
     }
 }
 
-fn cvss_label_to_num(label: &str) -> Option<f32> {
+pub fn cvss_label_to_num(label: &str) -> Option<f32> {
     // 8 = ceil(log2(200)) ; 200 is the maximim difference of (next-prev)/2.
     // Using more than 8 would be useless.
     const MAX_MODIFIERS: usize = 8;
@@ -1005,6 +1005,48 @@ fn cvss_label_to_num(label: &str) -> Option<f32> {
     }
 
     return Some(final_score.clamp(0.0, 10.0));
+}
+
+/// Returns a label according to the score. For example `10.0` -> `"CRITCAL"`.
+///
+/// ## Error
+///  - Returns `"Error"` if num does **not** fulfill `0.0 <= num <= 10.0` .
+///  
+pub fn cvss_num_to_label(num: f32, uppercase: bool) -> &'static str {
+    return match num {
+        0.0..3.999999 => {
+            if uppercase {
+                "LOW"
+            } else {
+                "Low"
+            }
+        }
+        4.0..6.999999 => {
+            if uppercase {
+                "MEDIUM"
+            } else {
+                "Medium"
+            }
+        }
+        7.0..9.999999 => {
+            if uppercase {
+                "HIGH"
+            } else {
+                "High"
+            }
+        }
+        9.0..=10.0 => {
+            if uppercase {
+                "CRITICAL"
+            } else {
+                "Critical"
+            }
+        }
+        _ => {
+            eprintln!("Invalid number passed to cvss_num_to_label: {num} ({uppercase})");
+            "Error"
+        }
+    };
 }
 
 #[cfg(test)]

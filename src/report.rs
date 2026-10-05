@@ -6,8 +6,7 @@ use std::{
 use clap::ArgMatches;
 
 use crate::{
-    DEBUG_MODE,
-    node::{State, Timeline},
+    DEBUG_MODE, consequences::cvss_num_to_label, node::{State, Timeline},
 };
 
 pub fn process_report<P: AsRef<Path>>(
@@ -20,7 +19,89 @@ pub fn process_report<P: AsRef<Path>>(
         TODO: also store std input ? / or do something with it?
     */
 
-    let contents: String = time_line_to_markdown(state as &State);
+
+
+
+    let timeline_str: String = time_line_to_markdown(state as &State);
+    let vulnerability_section: String = vulnerability_report_md(state as &State); 
+
+
+
+    let contents: String = format!(
+        "# MAIN TITLE\n\n\
+        TODO: fill the values and change title. \n\
+        Created by: {{authors}}\n\n{{date}}, {{Organization}}\
+        \n\
+        ## Executive summary\n\
+        \n\
+        TODO: the executive summary informs to non-technical people about the overall security position. \n\
+        \n\n\
+        ### Critical findings\n\
+        \n\
+        TODO: Select the findings to highlight or delete the section\n\
+        \n\
+        ### Business Impact\n\
+        \n\
+        TODO: How do the critical findings affect the organization. \n\
+        \n\
+        ### Recommendations Summary\n\
+        \n\
+        TODO: A high level overview of the most important remediation measures. \n\
+        \n\
+        ## Scope amd methodology\n\
+        \n\
+        TODO: What procedure was used to perform the pentest/read team exercise. \n\
+        \n\
+        ### Scope Definition\n\
+        \n\
+        TODO: Define precisely what are the elements to investigate. Also define what is *out* of scope. \n\
+        \n\
+        ### Testing methodology\n\
+        \n\
+        TODO: Descrive the approach used (OWASP Top 10, NIST guidelines; or a hybrid methodology). \n\
+        \n\
+        ### Rules of Engagement \n\
+        \n\
+        TODO: other rules or constraints. \n\
+        \n\
+        ## Detailed findings\n\
+        \n\
+        {vulnerability_section}
+        \n\
+        ## Technical details \n\
+        \n\
+        TODO: Technical section where other relevant details and information of the vulnerabilities are provided. \n\
+        \n\
+        ### Thecnical details \n\
+        \n\
+        TODO: complete this section or remove it. \n\
+        \n\
+        ### Configuration errors \n\
+        \n\
+        TODO: complete this section or remove it. \n\
+        \n\
+        ### Evidence\n\
+        \n\
+        TODO: complete this section or remove it. Includes screenshots, logs and other forms of evidence. \n\
+        \n\
+        ## Conclusion\n\
+        \n\
+        TODO: complete this section. \n\
+        \n\
+        ### Priorized recommendation roadmap\n\
+        \n\
+        TODO: Recommended roadmap for the remediation of the findings. \n\
+        \n\
+        ## Appendix\n\
+        \n\
+        ### Timeline\n\
+        \n\
+        {timeline_str}
+        \n\
+        "
+    
+    ); 
+
 
     match generate_file(path, contents.as_str()) {
         Ok(()) => {
@@ -103,7 +184,7 @@ fn time_line_to_markdown(state: &State) -> String {
 
     for collection in group_by_day {
         aux.clear();
-        aux = format!(" - {}: \n", collection.0.format("%d/%m/%Y"));
+        aux = format!(" - {}: \n", collection.0.format("%Y-%m-%d"));
         ret.push_str(&aux);
 
         for i in collection.1 {
@@ -120,4 +201,92 @@ fn time_line_to_markdown(state: &State) -> String {
     }
 
     return ret;
+}
+
+fn vulnerability_report_md(state: &State) -> String {
+
+    // TODO: sort vulnerabilities by criticity
+    let mut nameless_vuln_count: u32 = 0; 
+
+    let mut ret: String = String::new(); 
+    for vuln in &state.information.vulnerabilities {
+
+        let vuln_descr: &str = vuln.description.as_str(); 
+
+        let vuln_name: String = vuln_descr.lines().next().map(|n: &str|n.to_string()).unwrap_or({
+            nameless_vuln_count += 1; 
+            format!("Nameless vulnerability {nameless_vuln_count}")
+        }); 
+
+        let vuln_descr_fmt: String = format!(
+        "\
+        #### Description \n\
+        \n\
+        {vuln_descr}\n\n\
+        "); 
+
+        let vuln_loc_fmt: String = format!(
+        "\
+        #### Location \n\
+        \n\
+        {}\n\n\
+        ", vuln.location); 
+
+        let vuln_risk_fmt: String = format!(
+        "\
+        #### Risk analysis \n\
+        \n\
+        {}\n\n\
+        ", vuln.risk_analysis); 
+
+        let vuln_exploit_fmt: String = format!(
+        "\
+        #### Exploit / steps to reproduce \n\
+        \n\
+        {}\n\n\
+        ", vuln.exploit); 
+
+        let vuln_recomendation_fmt: String = format!(
+        "\
+        #### Recomendation \n\
+        \n\
+        {}\n\n\
+        ", vuln.recommendation); 
+
+        let cvss_label: String = vuln.severity_rating
+        .map(|s: u16| cvss_num_to_label((s as f32) * 0.01, true))
+        .map(|l: &str| format!("\\[{l}] ")).unwrap_or(String::new()); 
+
+        let cve_fmt: String = if vuln.cve.is_empty() {String::new()} else {
+            format!(" ({})", vuln.cve)
+        }; 
+
+        let affected_versions_fmt: String = if vuln.known_vunlerable_versions.is_empty() {String::new()} 
+        else {
+            let mut kvs: String = format!("Known vulnerable versions: "); 
+            for vers in &vuln.known_vunlerable_versions {
+                let line: String = format!("\n - {vers}"); 
+                kvs.push_str(&line);
+            }
+            kvs.push('\n');
+            kvs            
+        }; 
+
+        //////////////////
+
+        let vuln_str: String = format!(
+        "\
+        ### {cvss_label}{vuln_name}{cve_fmt} \n\
+        \n\
+        {affected_versions_fmt}\n\
+        {vuln_descr_fmt}\n\
+        {vuln_loc_fmt}\n\
+        {vuln_risk_fmt}\n\
+        {vuln_exploit_fmt}\n\
+        {vuln_recomendation_fmt}\n\
+        "); 
+        ret.push_str(&vuln_str);
+    }
+
+    return ret; 
 }
