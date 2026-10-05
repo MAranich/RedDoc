@@ -602,25 +602,18 @@ fn handle_subcommand_vulnerability(state: &mut State, raw_content: &ArgMatches) 
             );
     }
 
-    let mut severity_rating_opt: Option<f32> = cvss_label_to_num(&cvss_str);
-
-    if severity_rating_opt.is_none() && !cvss_str.is_empty() {
-        severity_rating_opt = match cvss_str.parse::<f32>() {
-            Ok(severity_rating) => Some(severity_rating),
-            Err(e) => {
-                eprintln!(
-                    "\n\nERROR: Invalid sequence inserted in the section Severity rating (CVSS). \
-                    Insert only the number between 0 an 10. Original_string: {cvss_str}\
-                    Parsing error: \
-                    \n {e:?}"
-                );
-                return vec![];
-            }
-        };
-    }
+    let severity_rating_opt: Option<f32> = cvss_label_to_num(&cvss_str);
 
     if let Some(severity_rating) = severity_rating_opt {
         vuln_builder = vuln_builder.severity_rating(severity_rating);
+    } else if !cvss_str.is_empty() {
+        eprintln!(
+            "\n\nERROR: Invalid sequence inserted in the section Severity rating (CVSS). \
+                    Insert only the number between 0 an 10. Original_string: {cvss_str}"
+        );
+        return vec![];
+    } else {
+        // no need to do anything, let it be at None
     }
 
     if vuln_builder.is_empty() {
@@ -968,11 +961,37 @@ fn add_software_to_computers(
     }
 }
 
+/// Thransforms the label to a numerical representation.
+///  - Labels are `critical`, `high`, `medium` and `low`.
+///  - Adding a `+` or a `-` adds or substracts 50% of value to the next tier.
+///  - If the string is a float, returns the parsed [f32].
+///      - Clamped between 0 and 10.
+///  - If the string is empty or cannor be properly parsed, returns [None].
+///
+/// The input is assumed to:
+/// - Have been trimmed
+///
+///
 #[must_use]
 pub fn cvss_label_to_num(label: &str) -> Option<f32> {
+    // For the +- functionality:
     // 8 = ceil(log2(200)) ; 200 is the maximim difference of (next-prev)/2.
     // Using more than 8 would be useless.
     const MAX_MODIFIERS: usize = 8;
+
+    // quickly check for empty string
+    if label.is_empty() {
+        return None;
+    }
+
+    // parse as float
+    if let Ok(value) = label.parse::<f32>() {
+        if !(value.is_infinite() || value.is_nan()) {
+            return Some(value.clamp(0.0, 10.0));
+        }
+        eprintln!("WARNING: An invalid number parsed cvss_label_to_num: {value}");
+        return None;
+    }
 
     let (_prev, base_score, next): (f32, f32, f32) = match label.chars().next() {
         Some('c' | 'C') => (9.0, 9.50, 10.0),
@@ -998,7 +1017,8 @@ pub fn cvss_label_to_num(label: &str) -> Option<f32> {
                 '-' => final_score += -step,
                 _ => {
                     // this should be unreachable
-                    eprintln!("Warning: unexpected char found in cvss_label_to_num");
+                    // eprintln!("Warning: unexpected char found in cvss_label_to_num");
+                    unreachable!("ERROR: unexpected char found in cvss_label_to_num");
                 }
             }
             step = step * 0.5;
@@ -1073,7 +1093,12 @@ mod tests {
             ("W", None),
             ("+", None),
             ("-", None),
-            ("-++-", None),
+            ("", None),
+            ("10", Some(1000)),
+            ("9.5", Some(950)),
+            ("7.52", Some(752)),
+            ("0", Some(0)),
+            ("0.0", Some(0)),
         ];
 
         aux.iter().for_each(|(label, expected_score)| {

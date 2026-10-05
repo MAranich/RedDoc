@@ -144,6 +144,7 @@ pub fn handler_write_user(questions: &[&str]) -> Result<Vec<String>, Box<dyn std
         initial_content.push_str(&aux);
         question_hashes.push(hash_str);
     }
+    for _ in 0..16 {initial_content.push('\n');}
 
     // let user write
     let original_awnser: String = ask_write_text_temporal(&initial_content)?;

@@ -6,7 +6,7 @@ use std::{
 use clap::ArgMatches;
 
 use crate::{
-    DEBUG_MODE, consequences::cvss_num_to_label, node::{State, Timeline},
+    DEBUG_MODE, consequences::cvss_num_to_label, information::Vulnerability, node::{State, Timeline},
 };
 
 pub fn process_report<P: AsRef<Path>>(
@@ -207,9 +207,13 @@ fn vulnerability_report_md(state: &State) -> String {
 
     // TODO: sort vulnerabilities by criticity
     let mut nameless_vuln_count: u32 = 0; 
+    let mut ref_vuln_list: Vec<&Vulnerability> = state.information.vulnerabilities.iter().map(|e: &Vulnerability| e ).collect::<Vec<&Vulnerability>>(); 
+    ref_vuln_list.sort_unstable_by_key(|v: &&Vulnerability| 
+        v.severity_rating.map(|s: u16| s + 1).unwrap_or_default()
+    ) ;
 
     let mut ret: String = String::new(); 
-    for vuln in &state.information.vulnerabilities {
+    for vuln in ref_vuln_list {
 
         let vuln_descr: &str = vuln.description.as_str(); 
 
@@ -279,12 +283,15 @@ fn vulnerability_report_md(state: &State) -> String {
         ### {cvss_label}{vuln_name}{cve_fmt} \n\
         \n\
         {affected_versions_fmt}\n\
+        {}\
         {vuln_descr_fmt}\n\
         {vuln_loc_fmt}\n\
         {vuln_risk_fmt}\n\
         {vuln_exploit_fmt}\n\
         {vuln_recomendation_fmt}\n\
-        "); 
+        ", 
+            vuln.severity_rating.map_or(String::new(), |s| format!("CVSS: {}\n", f32::from(s) * 0.01_f32))
+    ); 
         ret.push_str(&vuln_str);
     }
 

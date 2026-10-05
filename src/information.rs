@@ -305,7 +305,7 @@ impl VulnerabilityBuilder {
         reason = "The truncation is intended. "
     )]
     pub fn severity_rating(mut self, severity_rating_: f32) -> VulnerabilityBuilder {
-        let aux: f32 = severity_rating_.clamp(0.0, 10.0) * 1000.0;
+        let aux: f32 = severity_rating_.clamp(0.0, 10.0) * 100.0;
         self.severity_rating = Some(aux as u16);
         return self;
     }
