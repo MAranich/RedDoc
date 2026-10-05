@@ -213,10 +213,10 @@ fn vulnerability_report_md(state: &State) -> String {
 
         let vuln_descr: &str = vuln.description.as_str(); 
 
-        let vuln_name: String = vuln_descr.lines().next().map(|n: &str|n.to_string()).unwrap_or({
+        let vuln_name: String = vuln_descr.lines().next().map_or_else(|| {
             nameless_vuln_count += 1; 
             format!("Nameless vulnerability {nameless_vuln_count}")
-        }); 
+        }, |n: &str|n.to_string()); 
 
         let vuln_descr_fmt: String = format!(
         "\
@@ -254,8 +254,8 @@ fn vulnerability_report_md(state: &State) -> String {
         ", vuln.recommendation); 
 
         let cvss_label: String = vuln.severity_rating
-        .map(|s: u16| cvss_num_to_label((s as f32) * 0.01, true))
-        .map(|l: &str| format!("\\[{l}] ")).unwrap_or(String::new()); 
+        .map(|s: u16| cvss_num_to_label(f32::from(s) * 0.01, true))
+        .map_or(String::new(), |l: &str| format!("\\[{l}] ")); 
 
         let cve_fmt: String = if vuln.cve.is_empty() {String::new()} else {
             format!(" ({})", vuln.cve)
@@ -263,7 +263,7 @@ fn vulnerability_report_md(state: &State) -> String {
 
         let affected_versions_fmt: String = if vuln.known_vunlerable_versions.is_empty() {String::new()} 
         else {
-            let mut kvs: String = format!("Known vulnerable versions: "); 
+            let mut kvs: String = "Known vulnerable versions: ".to_string(); 
             for vers in &vuln.known_vunlerable_versions {
                 let line: String = format!("\n - {vers}"); 
                 kvs.push_str(&line);

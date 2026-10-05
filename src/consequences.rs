@@ -95,19 +95,15 @@ impl Consequence {
                     InfoClass::Vulnerability => {
                         let aux: Option<&Vulnerability> =
                             state.information.vulnerabilities.get(idx);
-                        if let Some(vuln) = aux {
-                            format!(
+                        aux.map_or_else(|| String::from(
+                                "New vulnerability discovered: Consequence stringification error (vulnerability not found). ",
+                            ), |vuln: &Vulnerability| format!(
                                 "New vulnerability discovered: {}",
                                 vuln.description
                                     .lines()
                                     .next()
                                     .unwrap_or("[Empty description]")
-                            )
-                        } else {
-                            String::from(
-                                "New vulnerability discovered: Consequence stringification error (vulnerability not found). ",
-                            )
-                        }
+                            ))
                     }
                     InfoClass::Service => format!(
                         "{:?}",
@@ -972,6 +968,7 @@ fn add_software_to_computers(
     }
 }
 
+#[must_use]
 pub fn cvss_label_to_num(label: &str) -> Option<f32> {
     // 8 = ceil(log2(200)) ; 200 is the maximim difference of (next-prev)/2.
     // Using more than 8 would be useless.
@@ -985,7 +982,11 @@ pub fn cvss_label_to_num(label: &str) -> Option<f32> {
         Some(_) | None => return None,
     };
 
-    let re: Regex = Regex::new(r"(\+|-)+").expect("Regex to be valid (cvss_label_to_num)");
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "The regex is valid and cannot panic. "
+    )]
+    let re: Regex = Regex::new(r"(\+|-)+").expect("The regex is valid");
 
     let mut final_score: f32 = base_score;
     let mut step: f32 = (next - base_score) * 0.5;
@@ -1012,34 +1013,35 @@ pub fn cvss_label_to_num(label: &str) -> Option<f32> {
 /// ## Error
 ///  - Returns `"Error"` if num does **not** fulfill `0.0 <= num <= 10.0` .
 ///  
+#[must_use]
 pub fn cvss_num_to_label(num: f32, uppercase: bool) -> &'static str {
     return match num {
-        0.0..3.999999 => {
+        9.0..=10.0 => {
             if uppercase {
-                "LOW"
+                "CRITICAL"
             } else {
-                "Low"
+                "Critical"
             }
         }
-        4.0..6.999999 => {
-            if uppercase {
-                "MEDIUM"
-            } else {
-                "Medium"
-            }
-        }
-        7.0..9.999999 => {
+        7.0..9.999_999 => {
             if uppercase {
                 "HIGH"
             } else {
                 "High"
             }
         }
-        9.0..=10.0 => {
+        4.0..6.999_999 => {
             if uppercase {
-                "CRITICAL"
+                "MEDIUM"
             } else {
-                "Critical"
+                "Medium"
+            }
+        }
+        0.0..3.999_999 => {
+            if uppercase {
+                "LOW"
+            } else {
+                "Low"
             }
         }
         _ => {
