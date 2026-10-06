@@ -181,8 +181,8 @@ pub fn process_consequences(sub_match: &ArgMatches, stdin: &str, state: &mut Sta
         Some((CONSEQUENCE_INFO_HONEYPOT, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_VIRTUAL_MACHINE, _raw_content)) => todo!(),
         Some((CONSEQUENCE_INFO_CREDENTIALS, _raw_content)) => todo!(),
-        Some(_) => panic!("Unrecognized action subcommand provided"),
-        None => panic!("No action subcommand provided. "),
+        Some(_) => panic!("Unrecognized action subcommand provided. \nUse the -h flag for help. "),
+        None => panic!("No action subcommand provided. \nUse the -h flag for help. "),
     };
 
     if new_nodes.is_empty() {

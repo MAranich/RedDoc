@@ -183,6 +183,8 @@ pub fn get_content(raw_content: &ArgMatches, stdin: &str) -> String {
 /// Quotes can be used so everything is treated as a single command:
 /// `"ls -la | grep meow"`
 ///
+/// Returns in the form `(input_node, output_node)`
+/// 
 /// # Known problems
 ///
 ///  - Programs that requiere a terminal will fail (interactive commands).
@@ -255,6 +257,13 @@ pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
     match result {
         Ok(output) => {
             // Input command node
+
+            let action: Action = Action {
+                category: ActionCategory::Command(args.clone()),
+                ttp: Vec::new(),
+            };
+            let input_node: Node = Node::new(Category::Action(action));
+
             // print the output in screes so user can see it
             let output_node: Node = if output.status.success() {
                 let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
@@ -286,12 +295,6 @@ pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
                     ),
                 ))
             };
-
-            let action: Action = Action {
-                category: ActionCategory::Command(args),
-                ttp: Vec::new(),
-            };
-            let input_node: Node = Node::new(Category::Action(action));
 
             ret = Some((input_node, output_node));
         }

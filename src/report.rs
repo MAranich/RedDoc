@@ -94,8 +94,6 @@ pub fn process_report<P: AsRef<Path>>(
         \n\
         ## Appendix\n\
         \n\
-        ### Timeline\n\
-        \n\
         {timeline_str}
         \n\
         "
@@ -179,7 +177,7 @@ fn time_line_to_markdown(state: &State) -> String {
 
     // Now the groups themselves are sorted.
 
-    let mut ret: String = String::from("## Timeline of events\n\n");
+    let mut ret: String = String::from("### Timeline of events\n\n");
     let mut aux: String = String::new();
 
     for collection in group_by_day {
@@ -209,7 +207,7 @@ fn vulnerability_report_md(state: &State) -> String {
     let mut nameless_vuln_count: u32 = 0; 
     let mut ref_vuln_list: Vec<&Vulnerability> = state.information.vulnerabilities.iter().map(|e: &Vulnerability| e ).collect::<Vec<&Vulnerability>>(); 
     ref_vuln_list.sort_unstable_by_key(|v: &&Vulnerability| 
-        v.severity_rating.map(|s: u16| s + 1).unwrap_or_default()
+        -v.severity_rating.map(|s: u16| i32::from(s + 1)).unwrap_or_default()
     ) ;
 
     let mut ret: String = String::new(); 
@@ -226,36 +224,36 @@ fn vulnerability_report_md(state: &State) -> String {
         "\
         #### Description \n\
         \n\
-        {vuln_descr}\n\n\
-        "); 
+        {}\n\n\
+        ", if vuln_descr.is_empty() {"[Empty description]"} else {vuln_descr}); 
 
-        let vuln_loc_fmt: String = format!(
+        let vuln_loc_fmt: String = if vuln.location.is_empty() {String::new()} else { format!(
         "\
         #### Location \n\
         \n\
         {}\n\n\
-        ", vuln.location); 
+        ", vuln.location)}; 
 
-        let vuln_risk_fmt: String = format!(
+        let vuln_risk_fmt: String = if vuln.risk_analysis.is_empty() {String::new()} else {format!(
         "\
         #### Risk analysis \n\
         \n\
         {}\n\n\
-        ", vuln.risk_analysis); 
+        ", vuln.risk_analysis)}; 
 
-        let vuln_exploit_fmt: String = format!(
+        let vuln_exploit_fmt: String = if vuln.exploit.is_empty() {String::new()} else {format!(
         "\
         #### Exploit / steps to reproduce \n\
         \n\
         {}\n\n\
-        ", vuln.exploit); 
+        ", vuln.exploit)}; 
 
-        let vuln_recomendation_fmt: String = format!(
+        let vuln_recomendation_fmt: String = if vuln.recommendation.is_empty() {String::new()} else {format!(
         "\
         #### Recomendation \n\
         \n\
         {}\n\n\
-        ", vuln.recommendation); 
+        ", vuln.recommendation)}; 
 
         let cvss_label: String = vuln.severity_rating
         .map(|s: u16| cvss_num_to_label(f32::from(s) * 0.01, true))
@@ -281,16 +279,15 @@ fn vulnerability_report_md(state: &State) -> String {
         let vuln_str: String = format!(
         "\
         ### {cvss_label}{vuln_name}{cve_fmt} \n\
-        \n\
-        {affected_versions_fmt}\n\
-        {}\
-        {vuln_descr_fmt}\n\
-        {vuln_loc_fmt}\n\
-        {vuln_risk_fmt}\n\
-        {vuln_exploit_fmt}\n\
-        {vuln_recomendation_fmt}\n\
+        {affected_versions_fmt}\
+        {}\n\
+        {vuln_descr_fmt}\
+        {vuln_loc_fmt}\
+        {vuln_risk_fmt}\
+        {vuln_exploit_fmt}\
+        {vuln_recomendation_fmt}\
         ", 
-            vuln.severity_rating.map_or(String::new(), |s| format!("CVSS: {}\n", f32::from(s) * 0.01_f32))
+            vuln.severity_rating.map_or(String::new(), |s| format!("CVSS: {:.2}\n", f32::from(s) * 0.01_f32))
     ); 
         ret.push_str(&vuln_str);
     }

@@ -193,20 +193,7 @@ fn main() {
                 state.add_node(&output_node);
             }
 
-            let updated_state_hash: u64 = {
-                let mut hasher: DefaultHasher = DefaultHasher::new();
-                state.hash(&mut hasher);
-                hasher.finish()
-            };
-            if updated_state_hash == original_state_hash {
-                println!("No changes were made. ");
-                return;
-            }
-
-            let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
-            if let Err(e) = save_result {
-                eprintln!("There has been an error storing the state. Error: \n{e:?}");
-            }
+            save_project(&state, original_state_hash, project_path); 
             return;
         }
     }
@@ -445,7 +432,11 @@ fn main() {
             return;
         }
     }
+    save_project(&state, original_state_hash, project_path); 
 
+}
+
+fn save_project(state: &State, original_state_hash: u64, project_path: &Path) {
     let updated_state_hash: u64 = {
         let mut hasher: DefaultHasher = DefaultHasher::new();
         state.hash(&mut hasher);
@@ -460,6 +451,8 @@ fn main() {
     if let Err(e) = save_result {
         eprintln!("There has been an error storing the state. Error: \n{e:?}");
     }
+
+
 }
 
 /// Returns a strig containing the standard input.
