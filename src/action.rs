@@ -8,16 +8,23 @@
 //! 
 //! 
 
+use std::{
+    env::{self},
+    io::Write,
+    process::{Command, Stdio},
+};
+
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT, get_stdin,
+    ACTION_CUSTOM, DEBUG_MODE, MAX_CHARS_CUSTOM_REPORT,
+    information::TTP,
     node::{Category, KnownCommnad, Node, State},
 };
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Action {
+pub enum ActionCategory {
     /// A custom action, the user may store any string
     Custom(String),
     /// The execution of a command (the output is sored in another node)
@@ -27,10 +34,16 @@ pub enum Action {
     // Script(String)
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Action {
+    category: ActionCategory,
+    ttp: Vec<TTP>,
+}
+
 impl ToString for Action {
     fn to_string(&self) -> String {
-        match self {
-            Self::Custom(content) => {
+        let category_str: String = match &self.category {
+            ActionCategory::Custom(content) => {
                 // remove unnecessary whitespace
                 let mut curated: &str = content.trim();
                 // set maximum length for convenience.
@@ -50,10 +63,23 @@ impl ToString for Action {
 
                 format!("custom: {curated}{clamped}")
             }
-            _ => todo!("Currently not implemented. "),
-        }
+            ActionCategory::Command(comm) => {
+                format!("`{comm}`")
+            },
+            ActionCategory::KnownCommnad(_known_commnad) => todo!("Printing known command currently not implemented. "),
+            // _ => todo!("Currently not implemented. "),
+        };
+
+        let string: String = if self.ttp.is_empty() {
+            format!("Action{{{category_str}}}")
+        } else {
+            format!("Action{{{:?}, {category_str}}}", self.ttp)
+        };
+        return string;
     }
 }
+
+impl Action {}
 
 /// Processes the action
 ///
@@ -63,13 +89,13 @@ impl ToString for Action {
 ///  - No subcommand was passed
 ///  - An unrecognized subcommand was passed.
 ///  - Due to other errors caused by the different subcommands.
-pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
+pub fn process_action(sub_match: &ArgMatches, stdin: &str, state: &mut State) {
     if DEBUG_MODE {
         println!("Action detected! Processing...");
     }
 
     let new_node: Option<Node> = match sub_match.subcommand() {
-        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content),
+        Some((ACTION_CUSTOM, raw_content)) => handle_subcommand_custom(raw_content, stdin),
         Some(_) => todo!("Unrecognized action subcommand provided"),
         None => todo!("No action subcommand provided. "),
     };
@@ -81,7 +107,16 @@ pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
         return;
     }
 
-    let new_node: Node = new_node.expect("To contain the Some variant. ");
+    let mut new_node: Node = new_node.expect("To contain the Some variant. ");
+
+    // Add TTPs
+    let ttps: Vec<TTP> = sub_match
+        .get_many::<String>("ttp")
+        .unwrap_or_default()
+        .map(|v| TTP::from(v.as_str()))
+        .collect::<Vec<TTP>>();
+
+    add_ttp_to_node(&mut new_node, ttps);
 
     if DEBUG_MODE {
         println!("New node: \n{new_node:?}");
@@ -90,13 +125,23 @@ pub fn process_action(sub_match: &ArgMatches, state: &mut State) {
     state.add_node(&new_node);
 }
 
-fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
-    let contents: String = handle_general_custom(raw_content);
+pub fn add_ttp_to_node(node: &mut Node, ttp: Vec<TTP>) {
+    if let Category::Action(action) = &mut node.category {
+        action.ttp = ttp;
+    }
+}
+
+fn handle_subcommand_custom(raw_content: &ArgMatches, stdin: &str) -> Option<Node> {
+    let contents: String = get_content(raw_content, stdin);
 
     if contents.is_empty() {
         None
     } else {
-        Some(Node::new(Category::Action(Action::Custom(contents))))
+        let action: Action = Action {
+            category: ActionCategory::Custom(contents),
+            ttp: Vec::new(),
+        };
+        Some(Node::new(Category::Action(action)))
     }
 }
 
@@ -104,7 +149,7 @@ fn handle_subcommand_custom(raw_content: &ArgMatches) -> Option<Node> {
 ///
 /// Used in both Action, Consequence and Event
 #[must_use]
-pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
+pub fn get_content(raw_content: &ArgMatches, stdin: &str) -> String {
     // Abstracted because a lot of code was the same. Done here because it's part of both Action, Consequence and Event
     /*
        We need to check if we got the values from the argument or stdin and handle each case:
@@ -117,8 +162,7 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
     let exists_content_arg: bool = !content_arg_opt.is_none_or(|s: &String| s.trim().is_empty());
     let mut content_arg: String = content_arg_opt.cloned().unwrap_or_default();
 
-    let content_stdin: String = get_stdin();
-    let exists_std_input: bool = !content_stdin.trim().is_empty();
+    let exists_std_input: bool = !stdin.trim().is_empty();
 
     let content: String = match (exists_content_arg, exists_std_input) {
         (true, true) => {
@@ -128,11 +172,11 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
             // add some space
             content_arg.push_str("\n\n");
 
-            content_arg.push_str(&content_stdin);
+            content_arg.push_str(stdin);
             content_arg
         }
         (true, false) => content_arg,
-        (false, true) => content_stdin,
+        (false, true) => String::from(stdin),
         (false, false) => {
             eprintln!(
                 "Error: No information was provided through the standard input (piped) nor a as raw text. \nNo action was taken. "
@@ -142,4 +186,136 @@ pub fn handle_general_custom(raw_content: &ArgMatches) -> String {
     };
 
     return content;
+}
+
+/// Processes the command and stores the adequate representation on the state.
+///
+/// Quotes can be used so everything is treated as a single command:
+/// `"ls -la | grep meow"`
+///
+/// Returns in the form `(input_node, output_node)`
+/// 
+/// # Known problems
+///
+///  - Programs that requiere a terminal will fail (interactive commands).
+///      - Example: `nano`
+///  - Programs that execute forever will also not terminate nor record data.
+///      - Example: `ping` (without `-c`)
+///
+/// # Panics
+///
+/// Panics if arguments contain invalid Uncode data.
+///
+#[must_use]
+pub fn process_command(stdin: &str) -> Option<(Node, Node)> {
+    /*
+        For this we need to:
+        1. Store the command execution action
+        2. Execute the command given in the args
+                - With the provided args and stdin
+        3. Store the result of the execution as a consequence.
+
+        Possible improvements for this function:
+        - a version that avoids the shell entirely
+        - a version that supports interactive commands
+        - a version that streams output live instead of waiting
+    */
+
+    // Get command as a single string
+    let args_vec: Vec<String> = env::args_os()
+        .skip(2)
+        .map(|x: std::ffi::OsString| x.into_string().expect("Invalid UTF-8 in args. "))
+        .collect();
+    // args are all arguments afrer the *command* argument
+
+    if args_vec.is_empty() {
+        // early return
+        eprintln!("No command passed. Aborting. ");
+        return None;
+    }
+
+    // Join arguments into a single string
+    let args: String = args_vec.join(" ");
+
+    // get child handle
+    let mut child: std::process::Child = Command::new("sh")
+        .arg("-c")
+        .arg(args.as_str())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Could not spawn process in `process_command`. ");
+
+    // Pass stdin
+    if let Some(mut stdin_handle) = child.stdin.take() {
+        let result: Result<(), std::io::Error> = stdin_handle.write_all(stdin.as_bytes());
+        if let Err(e) = result {
+            eprintln!(
+                "Failed to write to stdin in `process_command`. Was attempting to execute command |sh -c {args}| . Error: \n{e}"
+            );
+        }
+
+        drop(stdin_handle);
+    }
+
+    // Wait for process to exit and store output
+    let result: Result<std::process::Output, std::io::Error> = child.wait_with_output();
+
+    let mut ret: Option<(Node, Node)> = None;
+
+    match result {
+        Ok(output) => {
+            // Input command node
+
+            let action: Action = Action {
+                category: ActionCategory::Command(args.clone()),
+                ttp: Vec::new(),
+            };
+            let input_node: Node = Node::new(Category::Action(action));
+
+            // print the output in screes so user can see it
+            let output_node: Node = if output.status.success() {
+                let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                print!("{out_str}");
+
+                Node::new(Category::Consequence(
+                    crate::consequences::Consequence::Command(out_str.to_string(), String::new()),
+                ))
+            } else {
+                let err_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
+                let out_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                eprint!("There was an error with the command |{args}| . ");
+
+                let empty_err: bool = err_str.trim().is_empty();
+                let empty_out: bool = out_str.trim().is_empty();
+                if empty_err && empty_out {
+                    eprint!("Error: \n{err_str}\nOutput: \n{out_str}");
+                } else if empty_err {
+                    eprint!("Error: \n{err_str}");
+                } else {
+                    // empty_out
+                    eprint!("Output: \n{out_str}");
+                }
+
+                Node::new(Category::Consequence(
+                    crate::consequences::Consequence::Command(
+                        out_str.to_string(),
+                        err_str.to_string(),
+                    ),
+                ))
+            };
+
+            ret = Some((input_node, output_node));
+        }
+        Err(e) => {
+            eprintln!(
+                "There was an IO error while executing command |sh -c {args}| . No data was stored. Error: \n{e}"
+            );
+        }
+    }
+
+    return ret;
+
+    // todo!();
 }

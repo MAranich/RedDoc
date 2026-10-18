@@ -1,3 +1,6 @@
-/target
-./*.json
-./report*.md
+target
+debug
+Cargo.lock
+*.json
+project_examples/
+report*.md
