@@ -144,6 +144,8 @@ pub fn handler_write_user(questions: &[&str]) -> Result<Vec<String>, Box<dyn std
         initial_content.push_str(&aux);
         question_hashes.push(hash_str);
     }
+
+    #[expect(clippy::default_numeric_fallback, reason = "I am not adding numeric specifiers for that loop. Its just 16 iters. ")]
     for _ in 0..16 {
         initial_content.push('\n');
     }

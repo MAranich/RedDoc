@@ -30,12 +30,7 @@ use std::{
 };
 
 use crate::{
-    action::{process_action, process_command},
-    consequences::process_consequences,
-    event::process_event,
-    node::State,
-    questions::ask_bool_question,
-    report::process_report,
+    action::{process_action, process_command}, consequences::process_consequences, event::process_event, file_io::{load_project, save_project}, node::State, questions::ask_bool_question, report::process_report,
 };
 
 const ABOUT_ACTION_CLAP: &str = "Adds a node that represents an action. ";
@@ -146,6 +141,7 @@ pub mod information;
 pub mod node;
 pub mod questions;
 pub mod report;
+pub mod file_io;
 
 // ****************************
 
@@ -166,10 +162,10 @@ fn main() {
        For this reason we will detect the use of the subcommand *command* and parse it manually.
     */
 
-    let project_path: &Path = Path::new("./project.json");
     let report_path: &Path = Path::new("./report.md");
 
-    let mut state: State = State::get_state(project_path);
+    //let mut state: State = State::get_state(project_path);
+    let mut state: State = load_project();
     let original_state_hash: u64 = {
         let mut hasher: DefaultHasher = DefaultHasher::new();
         state.hash(&mut hasher);
@@ -193,7 +189,7 @@ fn main() {
                 state.add_node(&output_node);
             }
 
-            save_project(&state, original_state_hash, project_path); 
+            save_project(&state, original_state_hash); 
             return;
         }
     }
@@ -414,6 +410,8 @@ fn main() {
 
     // //////////
 
+    println!(); 
+
     match matches.subcommand() {
         Some((SUB_ACTION, sub_match)) => process_action(sub_match, stdin, &mut state),
         Some((SUB_CONSEQUENCE, sub_match)) => process_consequences(sub_match, stdin, &mut state),
@@ -432,28 +430,12 @@ fn main() {
             return;
         }
     }
-    save_project(&state, original_state_hash, project_path); 
+    save_project(&state, original_state_hash); 
+
+    print!("\n\n"); 
 
 }
 
-fn save_project(state: &State, original_state_hash: u64, project_path: &Path) {
-    let updated_state_hash: u64 = {
-        let mut hasher: DefaultHasher = DefaultHasher::new();
-        state.hash(&mut hasher);
-        hasher.finish()
-    };
-    if updated_state_hash == original_state_hash {
-        println!("No changes were made. ");
-        return;
-    }
-
-    let save_result: Result<(), std::io::Error> = State::save_state(project_path, &state);
-    if let Err(e) = save_result {
-        eprintln!("There has been an error storing the state. Error: \n{e:?}");
-    }
-
-
-}
 
 /// Returns a strig containing the standard input.
 ///

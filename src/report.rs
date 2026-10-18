@@ -48,7 +48,7 @@ pub fn process_report<P: AsRef<Path>>(
         \n\
         TODO: A high level overview of the most important remediation measures. \n\
         \n\
-        ## Scope amd methodology\n\
+        ## Scope and methodology\n\
         \n\
         TODO: What procedure was used to perform the pentest/read team exercise. \n\
         \n\
@@ -287,7 +287,7 @@ fn vulnerability_report_md(state: &State) -> String {
         {vuln_exploit_fmt}\
         {vuln_recomendation_fmt}\
         ", 
-            vuln.severity_rating.map_or(String::new(), |s| format!("CVSS: {:.2}\n", f32::from(s) * 0.01_f32))
+            vuln.severity_rating.map_or(String::new(), |s| format!("\nCVSS: {:.2}\n", f32::from(s) * 0.01_f32))
     ); 
         ret.push_str(&vuln_str);
     }
