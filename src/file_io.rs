@@ -201,7 +201,7 @@ impl Configuration {
         // update just project_path variable
         config.project_path = std::env::current_dir()
             .expect("Cannot obtain current working directory. (try launching from terminal?)");
-        config.project_path.set_file_name(filename);
+        config.project_path.push(filename);
 
         // store again
         Configuration::update_config_or_panic(&config);
